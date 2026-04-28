@@ -1,0 +1,27 @@
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "mmtech/iam-rbac",
+    "description": "Portable RBAC module for Laravel microservices using Kafka snapshots with IAM fallback.",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.3",
+        "laravel/framework": "^12.0|^13.0",
+        "mateusjunges/laravel-kafka": "^2.11"
+    },
+    "autoload": {
+        "psr-4": {
+            "Mmtech\\Rcab\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Mmtech\\Rcab\\Providers\\RcabServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
+
