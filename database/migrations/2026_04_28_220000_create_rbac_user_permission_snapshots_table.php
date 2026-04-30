@@ -10,6 +10,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('rbac_user_permission_snapshots')) {
+            Schema::drop('rbac_user_permission_snapshots');
+        }
+   
         Schema::create('rbac_user_permission_snapshots', function (Blueprint $table): void {
             $table->id();
             $table->string('message_key', 191)->unique();
