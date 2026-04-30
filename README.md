@@ -13,20 +13,7 @@ Portable RBAC package for Laravel microservices.
 
 ### 1) Require package (private repository)
 
-In the microservice `composer.json`:
-
-```json
-{
-  "repositories": [
-    {
-      "type": "vcs",
-      "url": "git@github.com:mmtech/MMT-IAM-RBAC.git"
-    }
-  ]
-}
-```
-
-Then install:
+In the microservice install:
 
 ```bash
 composer require mmtech/iam-rbac:^1.0
