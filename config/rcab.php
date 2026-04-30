@@ -7,8 +7,15 @@ return [
     'kafka' => [
         'enabled' => env('RCAB_KAFKA_ENABLED', true),
         'brokers' => env('RCAB_KAFKA_BROKERS', env('KAFKA_BROKERS', env('KAFKA_BOOTSTRAP_SERVERS', '127.0.0.1:9092'))),
-        'topic' => env('RCAB_KAFKA_TOPIC', 'iam.rbac.snapshots.v1'),
+        // Reserved fixed topic for RBAC snapshots; always consumed by rcab:consume-snapshots.
+        'topic' => 'iam.rbac.snapshots.v1',
         'group_id' => env('RCAB_KAFKA_GROUP_ID', 'rcab-materializer'),
+        // Optional: app-specific topics to consume in the same worker.
+        'handlers' => [
+            // 'auth.events.v1' => \App\Kafka\Handlers\AuthEventsTopicHandler::class,
+        ],
+        // skip|fail: behavior when a message arrives for a topic without registered handler.
+        'on_unhandled_topic' => env('RCAB_KAFKA_ON_UNHANDLED_TOPIC', 'skip'),
     ],
 
     'store' => [

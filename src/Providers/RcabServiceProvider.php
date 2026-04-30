@@ -10,7 +10,10 @@ use Mmtech\Rcab\Authorization\Contracts\SnapshotStoreInterface;
 use Mmtech\Rcab\Authorization\IamFallbackClient;
 use Mmtech\Rcab\Authorization\RcabPermissionChecker;
 use Mmtech\Rcab\Console\Commands\RcabConsumeSnapshotsCommand;
+use Mmtech\Rcab\Kafka\Handlers\RbacSnapshotTopicHandler;
+use Mmtech\Rcab\Kafka\KafkaEventPublisher;
 use Mmtech\Rcab\Kafka\RbacSnapshotMessageParser;
+use Mmtech\Rcab\Kafka\TopicHandlerRegistry;
 use Mmtech\Rcab\RcabModule;
 use Mmtech\Rcab\Storage\DatabaseSnapshotStore;
 
@@ -21,6 +24,9 @@ final class RcabServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__.'/../../config/rcab.php', 'rcab');
 
         $this->app->singleton(RbacSnapshotMessageParser::class);
+        $this->app->singleton(KafkaEventPublisher::class);
+        $this->app->singleton(RbacSnapshotTopicHandler::class);
+        $this->app->singleton(TopicHandlerRegistry::class);
         $this->app->singleton(IamFallbackClient::class);
         $this->app->singleton(SnapshotStoreInterface::class, DatabaseSnapshotStore::class);
         $this->app->singleton(PermissionCheckerInterface::class, RcabPermissionChecker::class);

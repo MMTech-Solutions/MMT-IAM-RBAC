@@ -7,8 +7,7 @@ namespace Mmtech\Rcab\Console\Commands;
 use Illuminate\Console\Command;
 use Junges\Kafka\Contracts\ConsumerMessage;
 use Junges\Kafka\Facades\Kafka;
-use Mmtech\Rcab\Authorization\Contracts\SnapshotStoreInterface;
-use Mmtech\Rcab\Kafka\RbacSnapshotMessageParser;
+use Mmtech\Rcab\Kafka\TopicHandlerRegistry;
 
 final class RcabConsumeSnapshotsCommand extends Command
 {
@@ -16,11 +15,10 @@ final class RcabConsumeSnapshotsCommand extends Command
         {--stop-after-last-message : Stop after consuming available messages}
         {--max-messages=0 : Maximum number of messages to consume (0 = unlimited)}';
 
-    protected $description = 'Consume RBAC snapshots from Kafka and materialize locally.';
+    protected $description = 'Consume fixed RBAC snapshots topic plus configured topics and dispatch handlers.';
 
     public function __construct(
-        private readonly SnapshotStoreInterface $snapshotStore,
-        private readonly RbacSnapshotMessageParser $messageParser
+        private readonly TopicHandlerRegistry $topicHandlerRegistry
     ) {
         parent::__construct();
     }
@@ -33,27 +31,16 @@ final class RcabConsumeSnapshotsCommand extends Command
             return self::SUCCESS;
         }
 
-        $topic = (string) config('rcab.kafka.topic', 'iam.rbac.snapshots.v1');
         $groupId = (string) config('rcab.kafka.group_id', 'rcab-materializer');
         $brokers = (string) config('rcab.kafka.brokers', (string) config('kafka.brokers', '127.0.0.1:9092'));
+        $topics = $this->topicHandlerRegistry->topicsToSubscribe();
 
         $consumerBuilder = Kafka::consumer(
-            topics: [$topic],
+            topics: $topics,
             groupId: $groupId,
             brokers: $brokers
         )->withHandler(function (ConsumerMessage $message): void {
-            $parsed = $this->messageParser->parse($message);
-            if ($parsed === null) {
-                return;
-            }
-
-            if ($parsed->isTombstone) {
-                $this->snapshotStore->deleteSnapshot($parsed->sub, $parsed->surface);
-
-                return;
-            }
-
-            $this->snapshotStore->upsertSnapshot($parsed);
+            $this->topicHandlerRegistry->handle($message);
         });
 
         $maxMessages = (int) $this->option('max-messages');

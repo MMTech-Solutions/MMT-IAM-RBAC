@@ -5,7 +5,9 @@ Portable RBAC package for Laravel microservices.
 ## What it provides
 
 - Permission checks by gateway `sub` with `request()->user()->can('permission.slug')`
-- Kafka snapshot consumer (`iam.rbac.snapshots.v1`)
+- Kafka snapshot consumer (`iam.rbac.snapshots.v1`) always enabled in the command worker
+- Reusable Kafka publisher service to emit events to any topic
+- Multi-topic consumer with per-topic handlers (class-map)
 - Local materialized store in database (`rcab_user_permission_snapshots`)
 - IAM fallback endpoint support when local snapshot is missing
 
@@ -43,8 +45,8 @@ $middleware->alias([
 ```dotenv
 RCAB_KAFKA_ENABLED=true
 RCAB_KAFKA_BROKERS=kafka.mmtech-solutions.com:9092
-RCAB_KAFKA_TOPIC=iam.rbac.snapshots.v1
 RCAB_KAFKA_GROUP_ID=rcab-materializer
+RCAB_KAFKA_ON_UNHANDLED_TOPIC=skip
 
 RCAB_IAM_FALLBACK_ENABLED=true
 RCAB_IAM_BASE_URL=http://iam-service
@@ -60,6 +62,58 @@ RCAB_GATEWAY_INTERNAL_SECRET=apisix
 
 ```bash
 php artisan rcab:consume-snapshots
+```
+
+This command always subscribes `iam.rbac.snapshots.v1` and will additionally subscribe
+to any topics configured in `rcab.kafka.handlers`.
+
+## Multi-topic handlers (custom microservice logic)
+
+In your microservice, implement handlers that process business logic for a topic:
+
+```php
+<?php
+
+namespace App\Kafka\Handlers;
+
+use Junges\Kafka\Contracts\ConsumerMessage;
+use Mmtech\Rcab\Kafka\Contracts\TopicMessageHandlerInterface;
+
+final class AuthEventsTopicHandler implements TopicMessageHandlerInterface
+{
+    public function topic(): string
+    {
+        return 'auth.events.v1';
+    }
+
+    public function handle(ConsumerMessage $message): void
+    {
+        // Your business logic here.
+    }
+}
+```
+
+Register topic => handler class in published `config/rcab.php`:
+
+```php
+'kafka' => [
+    // ...
+    'handlers' => [
+        'auth.events.v1' => \App\Kafka\Handlers\AuthEventsTopicHandler::class,
+    ],
+],
+```
+
+## Publish events from business logic
+
+Inject `Mmtech\Rcab\Kafka\KafkaEventPublisher` and publish to any topic:
+
+```php
+$publisher->publish(
+    topic: 'notifications.email.v1',
+    payload: ['event' => 'welcome-email', 'user_id' => $userId],
+    key: $userId
+);
 ```
 
 ## Route usage
