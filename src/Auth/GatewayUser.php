@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Mmtech\Rcab\Auth;
+namespace Mmtech\Rbac\Auth;
 
 use Illuminate\Auth\Authenticatable as AuthenticatableTrait;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;

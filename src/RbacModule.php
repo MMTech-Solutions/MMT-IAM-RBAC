@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Mmtech\Rcab;
+namespace Mmtech\Rbac;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Mmtech\Rcab\Authorization\Contracts\PermissionCheckerInterface;
-use Mmtech\Rcab\Support\SurfaceResolver;
+use Mmtech\Rbac\Authorization\Contracts\PermissionCheckerInterface;
+use Mmtech\Rbac\Support\SurfaceResolver;
 
-final class RcabModule
+final class RbacModule
 {
     public static function boot(): void
     {
@@ -64,7 +64,7 @@ final class RcabModule
                 return true;
             }
 
-            $strictDeny = (bool) config('rcab.auth.strict_deny', true);
+            $strictDeny = (bool) config('kafkammt.rbac.auth.strict_deny', true);
             if ($strictDeny) {
                 return false;
             }

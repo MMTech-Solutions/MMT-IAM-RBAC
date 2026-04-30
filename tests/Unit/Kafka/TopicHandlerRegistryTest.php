@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Mmtech\Rcab\Tests\Unit\Kafka;
+namespace Mmtech\Rbac\Tests\Unit\Kafka;
 
 use Illuminate\Container\Container;
 use Junges\Kafka\Contracts\ConsumerMessage;
-use Mmtech\Rcab\Authorization\Contracts\SnapshotStoreInterface;
-use Mmtech\Rcab\Kafka\Contracts\TopicMessageHandlerInterface;
-use Mmtech\Rcab\Kafka\RbacSnapshotMessageParser;
-use Mmtech\Rcab\Kafka\TopicHandlerRegistry;
+use Mmtech\Rbac\Authorization\Contracts\SnapshotStoreInterface;
+use Mmtech\Rbac\Kafka\Contracts\TopicMessageHandlerInterface;
+use Mmtech\Rbac\Kafka\RbacSnapshotMessageParser;
+use Mmtech\Rbac\Kafka\TopicHandlerRegistry;
 use PHPUnit\Framework\TestCase;
 
 final class TopicHandlerRegistryTest extends TestCase
@@ -29,7 +29,7 @@ final class TopicHandlerRegistryTest extends TestCase
         $container = $this->makeContainer();
         $container->singleton(FakeTopicHandler::class, FakeTopicHandler::class);
 
-        $container->make('config')->set('rcab.kafka.handlers', [
+        $container->make('config')->set('kafkammt.rbac.consumer.handlers', [
             'custom.events.v1' => FakeTopicHandler::class,
         ]);
 
@@ -53,8 +53,8 @@ final class TopicHandlerRegistryTest extends TestCase
              * @var array<string, mixed>
              */
             private array $data = [
-                'rcab.kafka.handlers' => [],
-                'rcab.kafka.on_unhandled_topic' => 'skip',
+                'kafkammt.rbac.consumer.handlers' => [],
+                'kafkammt.rbac.consumer.on_unhandled_topic' => 'skip',
             ];
 
             public function get(string $key, mixed $default = null): mixed
@@ -70,12 +70,12 @@ final class TopicHandlerRegistryTest extends TestCase
 
         $container->singleton(SnapshotStoreInterface::class, static fn (): SnapshotStoreInterface => new class implements SnapshotStoreInterface
         {
-            public function getSnapshot(string $sub, string $surface): ?\Mmtech\Rcab\Kafka\RbacSnapshotMessage
+            public function getSnapshot(string $sub, string $surface): ?\Mmtech\Rbac\Kafka\RbacSnapshotMessage
             {
                 return null;
             }
 
-            public function upsertSnapshot(\Mmtech\Rcab\Kafka\RbacSnapshotMessage $snapshot): void {}
+            public function upsertSnapshot(\Mmtech\Rbac\Kafka\RbacSnapshotMessage $snapshot): void {}
 
             public function deleteSnapshot(string $sub, string $surface): void {}
         });

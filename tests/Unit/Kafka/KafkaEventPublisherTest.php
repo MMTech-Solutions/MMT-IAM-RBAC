@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Mmtech\Rcab\Tests\Unit\Kafka;
+namespace Mmtech\Rbac\Tests\Unit\Kafka;
 
 use InvalidArgumentException;
-use Mmtech\Rcab\Kafka\KafkaEventPublisher;
+use Mmtech\Rbac\Kafka\KafkaEventPublisher;
 use PHPUnit\Framework\TestCase;
 
 final class KafkaEventPublisherTest extends TestCase

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Mmtech\Rcab\Kafka\Contracts;
+namespace Mmtech\Rbac\Kafka\Contracts;
 
 use Junges\Kafka\Contracts\ConsumerMessage;
 

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Mmtech\Rcab\Http\Middleware;
+namespace Mmtech\Rbac\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Mmtech\Rcab\Auth\GatewayUser;
+use Mmtech\Rbac\Auth\GatewayUser;
 use Symfony\Component\HttpFoundation\Response;
 
 final class BindGatewayUserToAuth
@@ -25,7 +25,7 @@ final class BindGatewayUserToAuth
         }
 
         $user = new GatewayUser(id: $sub, gatewayUserInfo: $info);
-        $guard = (string) config('rcab.auth.guard', 'web');
+        $guard = (string) config('kafkammt.rbac.auth.guard', 'web');
 
         Auth::shouldUse($guard);
         Auth::guard($guard)->setUser($user);

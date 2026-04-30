@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Mmtech\Rcab\Storage;
+namespace Mmtech\Rbac\Storage;
 
 use Illuminate\Support\Facades\DB;
-use Mmtech\Rcab\Authorization\Contracts\SnapshotStoreInterface;
-use Mmtech\Rcab\Kafka\RbacSnapshotMessage;
+use Mmtech\Rbac\Authorization\Contracts\SnapshotStoreInterface;
+use Mmtech\Rbac\Kafka\RbacSnapshotMessage;
 
 final class DatabaseSnapshotStore implements SnapshotStoreInterface
 {
@@ -99,7 +99,7 @@ final class DatabaseSnapshotStore implements SnapshotStoreInterface
 
     private function table(): string
     {
-        return (string) config('rcab.store.table', 'rcab_user_permission_snapshots');
+        return (string) config('kafkammt.rbac.store.table', 'rbac_user_permission_snapshots');
     }
 }
 

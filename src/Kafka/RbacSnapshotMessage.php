@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Mmtech\Rcab\Kafka;
+namespace Mmtech\Rbac\Kafka;
 
 final class RbacSnapshotMessage
 {

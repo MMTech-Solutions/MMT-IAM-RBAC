@@ -10,7 +10,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('rcab_user_permission_snapshots', function (Blueprint $table): void {
+        Schema::create('rbac_user_permission_snapshots', function (Blueprint $table): void {
             $table->id();
             $table->string('message_key', 191)->unique();
             $table->uuid('sub');
@@ -27,7 +27,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('rcab_user_permission_snapshots');
+        Schema::dropIfExists('rbac_user_permission_snapshots');
     }
 };
 

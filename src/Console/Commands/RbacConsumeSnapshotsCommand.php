@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Mmtech\Rcab\Console\Commands;
+namespace Mmtech\Rbac\Console\Commands;
 
 use Illuminate\Console\Command;
 use Junges\Kafka\Contracts\ConsumerMessage;
 use Junges\Kafka\Facades\Kafka;
-use Mmtech\Rcab\Kafka\TopicHandlerRegistry;
+use Mmtech\Rbac\Kafka\TopicHandlerRegistry;
 
-final class RcabConsumeSnapshotsCommand extends Command
+final class RbacConsumeSnapshotsCommand extends Command
 {
-    protected $signature = 'rcab:consume-snapshots
+    protected $signature = 'rbac:consume-snapshots
         {--stop-after-last-message : Stop after consuming available messages}
         {--max-messages=0 : Maximum number of messages to consume (0 = unlimited)}';
 
@@ -25,14 +25,14 @@ final class RcabConsumeSnapshotsCommand extends Command
 
     public function handle(): int
     {
-        if (! (bool) config('rcab.kafka.enabled', true)) {
-            $this->warn('RCAB Kafka consumer is disabled (rcab.kafka.enabled=false).');
+        if (! (bool) config('kafkammt.rbac.consumer.enabled', true)) {
+            $this->warn('RBAC Kafka consumer is disabled (kafkammt.rbac.consumer.enabled=false).');
 
             return self::SUCCESS;
         }
 
-        $groupId = (string) config('rcab.kafka.group_id', 'rcab-materializer');
-        $brokers = (string) config('rcab.kafka.brokers', (string) config('kafka.brokers', '127.0.0.1:9092'));
+        $groupId = (string) config('kafkammt.rbac.consumer.group_id', 'rbac-materializer');
+        $brokers = (string) config('kafkammt.brokers', '127.0.0.1:9092');
         $topics = $this->topicHandlerRegistry->topicsToSubscribe();
 
         $consumerBuilder = Kafka::consumer(

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Mmtech\Rcab\Authorization\Contracts;
+namespace Mmtech\Rbac\Authorization\Contracts;
 
-use Mmtech\Rcab\Kafka\RbacSnapshotMessage;
+use Mmtech\Rbac\Kafka\RbacSnapshotMessage;
 
 interface SnapshotStoreInterface
 {

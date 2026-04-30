@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Mmtech\Rcab\Http\Middleware;
+namespace Mmtech\Rbac\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
@@ -17,8 +17,8 @@ final class ResolveGatewayUserInfo
 
     public function handle(Request $request, Closure $next): Response
     {
-        $internalHeader = (string) config('rcab.gateway.internal_header', self::DEFAULT_INTERNAL_HEADER);
-        $internalSecret = (string) config('rcab.gateway.internal_secret', 'apisix');
+        $internalHeader = (string) config('kafkammt.rbac.gateway.internal_header', self::DEFAULT_INTERNAL_HEADER);
+        $internalSecret = (string) config('kafkammt.rbac.gateway.internal_secret', 'apisix');
 
         if ($internalSecret === '' || $request->header($internalHeader) !== $internalSecret) {
             $this->maybeLog('Internal gateway header is missing');
@@ -26,7 +26,7 @@ final class ResolveGatewayUserInfo
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        $userinfoHeader = (string) config('rcab.gateway.userinfo_header', self::DEFAULT_USERINFO_HEADER);
+        $userinfoHeader = (string) config('kafkammt.rbac.gateway.userinfo_header', self::DEFAULT_USERINFO_HEADER);
         $value = $request->header($userinfoHeader);
         if ($value === null || trim((string) $value) === '') {
             $this->maybeLog('Userinfo header is missing');
@@ -53,7 +53,7 @@ final class ResolveGatewayUserInfo
 
     private function maybeLog(string $message): void
     {
-        if ((bool) config('rcab.gateway.log_missing_headers', false)) {
+        if ((bool) config('kafkammt.rbac.gateway.log_missing_headers', false)) {
             Log::info($message);
         }
     }

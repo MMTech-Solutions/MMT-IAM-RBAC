@@ -8,7 +8,7 @@ Portable RBAC package for Laravel microservices.
 - Kafka snapshot consumer (`iam.rbac.snapshots.v1`) always enabled in the command worker
 - Reusable Kafka publisher service to emit events to any topic
 - Multi-topic consumer with per-topic handlers (class-map)
-- Local materialized store in database (`rcab_user_permission_snapshots`)
+- Local materialized store in database (`rbac_user_permission_snapshots`)
 - IAM fallback endpoint support when local snapshot is missing
 
 ## Installation in a Laravel microservice
@@ -24,8 +24,8 @@ composer require mmtech/iam-rbac:^1.0
 ### 2) Publish package files
 
 ```bash
-php artisan vendor:publish --tag=rcab-config
-php artisan vendor:publish --tag=rcab-migrations
+php artisan vendor:publish --tag=rbac-config
+php artisan vendor:publish --tag=rbac-migrations
 php artisan migrate --no-interaction
 ```
 
@@ -35,37 +35,41 @@ In `bootstrap/app.php`:
 
 ```php
 $middleware->alias([
-    'rcab.auth.user' => \Mmtech\Rcab\Http\Middleware\ResolveGatewayUserInfo::class,
-    'rcab.bind.gateway.user' => \Mmtech\Rcab\Http\Middleware\BindGatewayUserToAuth::class,
+    'rbac.auth.user' => \Mmtech\Rbac\Http\Middleware\ResolveGatewayUserInfo::class,
+    'rbac.bind.gateway.user' => \Mmtech\Rbac\Http\Middleware\BindGatewayUserToAuth::class,
 ]);
 ```
 
 ### 4) Configure env
 
 ```dotenv
-RCAB_KAFKA_ENABLED=true
-RCAB_KAFKA_BROKERS=kafka.mmtech-solutions.com:9092
-RCAB_KAFKA_GROUP_ID=rcab-materializer
-RCAB_KAFKA_ON_UNHANDLED_TOPIC=skip
+RBAC_KAFKA_ENABLED=true
+KAFKA_BROKERS=kafka.mmtech-solutions.com:9092
+KAFKA_SECURITY_PROTOCOL=PLAINTEXT
+RBAC_KAFKA_GROUP_ID=rbac-materializer
+RBAC_KAFKA_ON_UNHANDLED_TOPIC=skip
 
-RCAB_IAM_FALLBACK_ENABLED=true
-RCAB_IAM_BASE_URL=http://iam-service
-RCAB_IAM_INTERNAL_TOKEN=secret
-RCAB_IAM_TIMEOUT_MS=1500
+RBAC_IAM_FALLBACK_ENABLED=true
+RBAC_IAM_BASE_URL=http://iam-service
+RBAC_IAM_INTERNAL_TOKEN=secret
+RBAC_IAM_TIMEOUT_MS=1500
 
-RCAB_FAIL_MODE=deny
-RCAB_STRICT_DENY=true
-RCAB_GATEWAY_INTERNAL_SECRET=apisix
+RBAC_FAIL_MODE=deny
+RBAC_STRICT_DENY=true
+RBAC_GATEWAY_INTERNAL_SECRET=apisix
 ```
+
+The package publishes a full `config/kafkammt.php` (laravel-kafka compatible keys + `kafkammt.rbac.*`),
+so Kafka connectivity and RBAC consumer behavior are managed from the same file.
 
 ### 5) Run consumer
 
 ```bash
-php artisan rcab:consume-snapshots
+php artisan rbac:consume-snapshots
 ```
 
 This command always subscribes `iam.rbac.snapshots.v1` and will additionally subscribe
-to any topics configured in `rcab.kafka.handlers`.
+to any topics configured in `kafkammt.rbac.consumer.handlers`.
 
 ## Multi-topic handlers (custom microservice logic)
 
@@ -77,7 +81,7 @@ In your microservice, implement handlers that process business logic for a topic
 namespace App\Kafka\Handlers;
 
 use Junges\Kafka\Contracts\ConsumerMessage;
-use Mmtech\Rcab\Kafka\Contracts\TopicMessageHandlerInterface;
+use Mmtech\Rbac\Kafka\Contracts\TopicMessageHandlerInterface;
 
 final class AuthEventsTopicHandler implements TopicMessageHandlerInterface
 {
@@ -93,20 +97,22 @@ final class AuthEventsTopicHandler implements TopicMessageHandlerInterface
 }
 ```
 
-Register topic => handler class in published `config/rcab.php`:
+Register topic => handler class in published `config/kafkammt.php`:
 
 ```php
-'kafka' => [
-    // ...
-    'handlers' => [
-        'auth.events.v1' => \App\Kafka\Handlers\AuthEventsTopicHandler::class,
+'rbac' => [
+    'consumer' => [
+        // ...
+        'handlers' => [
+            'auth.events.v1' => \App\Kafka\Handlers\AuthEventsTopicHandler::class,
+        ],
     ],
 ],
 ```
 
 ## Publish events from business logic
 
-Inject `Mmtech\Rcab\Kafka\KafkaEventPublisher` and publish to any topic:
+Inject `Mmtech\Rbac\Kafka\KafkaEventPublisher` and publish to any topic:
 
 ```php
 $publisher->publish(
@@ -119,7 +125,7 @@ $publisher->publish(
 ## Route usage
 
 ```php
-Route::middleware(['rcab.auth.user', 'rcab.bind.gateway.user', 'can:orders.read'])
+Route::middleware(['rbac.auth.user', 'rbac.bind.gateway.user', 'can:orders.read'])
     ->get('/orders', OrdersController::class);
 ```
 

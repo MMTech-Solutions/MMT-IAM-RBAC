@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Mmtech\Rcab\Authorization\Contracts;
+namespace Mmtech\Rbac\Authorization\Contracts;
 
 interface PermissionCheckerInterface
 {

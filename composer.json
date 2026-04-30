@@ -11,12 +11,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Mmtech\\Rcab\\": "src/"
+            "Mmtech\\Rbac\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Mmtech\\Rcab\\Tests\\": "tests/"
+            "Mmtech\\Rbac\\Tests\\": "tests/"
         }
     },
     "require-dev": {
@@ -28,7 +28,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Mmtech\\Rcab\\Providers\\RcabServiceProvider"
+                "Mmtech\\Rbac\\Providers\\RbacServiceProvider"
             ]
         }
     },

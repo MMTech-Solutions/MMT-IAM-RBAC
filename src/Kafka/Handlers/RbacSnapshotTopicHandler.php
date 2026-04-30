@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Mmtech\Rcab\Kafka\Handlers;
+namespace Mmtech\Rbac\Kafka\Handlers;
 
 use Junges\Kafka\Contracts\ConsumerMessage;
-use Mmtech\Rcab\Authorization\Contracts\SnapshotStoreInterface;
-use Mmtech\Rcab\Kafka\Contracts\TopicMessageHandlerInterface;
-use Mmtech\Rcab\Kafka\RbacSnapshotMessageParser;
+use Mmtech\Rbac\Authorization\Contracts\SnapshotStoreInterface;
+use Mmtech\Rbac\Kafka\Contracts\TopicMessageHandlerInterface;
+use Mmtech\Rbac\Kafka\RbacSnapshotMessageParser;
 
 final class RbacSnapshotTopicHandler implements TopicMessageHandlerInterface
 {

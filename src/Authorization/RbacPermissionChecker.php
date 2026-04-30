@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Mmtech\Rcab\Authorization;
+namespace Mmtech\Rbac\Authorization;
 
-use Mmtech\Rcab\Authorization\Contracts\PermissionCheckerInterface;
-use Mmtech\Rcab\Authorization\Contracts\SnapshotStoreInterface;
+use Mmtech\Rbac\Authorization\Contracts\PermissionCheckerInterface;
+use Mmtech\Rbac\Authorization\Contracts\SnapshotStoreInterface;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 use Throwable;
 
-final class RcabPermissionChecker implements PermissionCheckerInterface
+final class RbacPermissionChecker implements PermissionCheckerInterface
 {
     /**
      * @var array<string, array{permissions: list<string>, rev: int}>
@@ -50,7 +50,7 @@ final class RcabPermissionChecker implements PermissionCheckerInterface
 
             return in_array($ability, $snapshot->permissions, true);
         } catch (Throwable $e) {
-            $failMode = (string) config('rcab.auth.fail_mode', 'deny');
+            $failMode = (string) config('kafkammt.rbac.auth.fail_mode', 'deny');
             if ($failMode === 'service_unavailable') {
                 throw new ServiceUnavailableHttpException(null, 'RBAC service unavailable', $e);
             }
@@ -65,7 +65,7 @@ final class RcabPermissionChecker implements PermissionCheckerInterface
             return trim($surface);
         }
 
-        $configured = config('rcab.surface.default');
+        $configured = config('kafkammt.rbac.surface.default');
         if (is_string($configured) && trim($configured) !== '') {
             return trim($configured);
         }

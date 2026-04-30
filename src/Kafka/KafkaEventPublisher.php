@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Mmtech\Rcab\Kafka;
+namespace Mmtech\Rbac\Kafka;
 
 use InvalidArgumentException;
 use Junges\Kafka\Facades\Kafka;
@@ -23,7 +23,9 @@ final class KafkaEventPublisher
         }
 
         try {
-            $builder = Kafka::publish()
+            $brokers = (string) config('kafkammt.brokers', '127.0.0.1:9092');
+
+            $builder = Kafka::publish($brokers)
                 ->onTopic($normalizedTopic)
                 ->withBody($payload);
 
