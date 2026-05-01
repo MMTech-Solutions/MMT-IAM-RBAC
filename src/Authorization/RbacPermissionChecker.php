@@ -50,7 +50,7 @@ final class RbacPermissionChecker implements PermissionCheckerInterface
 
             return in_array($ability, $snapshot->permissions, true);
         } catch (Throwable $e) {
-            $failMode = (string) config('kafkammt.rbac.auth.fail_mode', 'deny');
+            $failMode = (string) config('rbac.auth.fail_mode', 'deny');
             if ($failMode === 'service_unavailable') {
                 throw new ServiceUnavailableHttpException(null, 'RBAC service unavailable', $e);
             }
@@ -65,7 +65,7 @@ final class RbacPermissionChecker implements PermissionCheckerInterface
             return trim($surface);
         }
 
-        $configured = config('kafkammt.rbac.surface.default');
+        $configured = config('rbac.surface.default');
         if (is_string($configured) && trim($configured) !== '') {
             return trim($configured);
         }

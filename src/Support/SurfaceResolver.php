@@ -10,7 +10,7 @@ final class SurfaceResolver
 {
     public static function resolve(Request $request): string
     {
-        $forced = config('kafkammt.rbac.surface.default');
+        $forced = config('rbac.surface.default');
         if (is_string($forced) && trim($forced) !== '') {
             return trim($forced);
         }

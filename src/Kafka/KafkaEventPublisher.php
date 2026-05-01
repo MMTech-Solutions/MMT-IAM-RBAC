@@ -23,7 +23,7 @@ final class KafkaEventPublisher
         }
 
         try {
-            $brokers = (string) config('kafkammt.brokers', '127.0.0.1:9092');
+            $brokers = (string) config('kafka.brokers', '127.0.0.1:9092');
 
             $builder = Kafka::publish($brokers)
                 ->onTopic($normalizedTopic)

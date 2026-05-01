@@ -21,7 +21,7 @@ final class RbacServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__.'/../../config/kafkammt.php', 'kafkammt');
+        $this->mergeConfigFrom(__DIR__.'/../../config/rbac.php', 'rbac');
 
         $this->app->singleton(RbacSnapshotMessageParser::class);
         $this->app->singleton(KafkaEventPublisher::class);
@@ -35,9 +35,16 @@ final class RbacServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->publishes([
-            __DIR__.'/../../config/kafkammt.php' => config_path('kafkammt.php'),
-        ], 'rbac-config');
+        $publishables = [
+            __DIR__.'/../../config/rbac.php' => config_path('rbac.php'),
+        ];
+
+        $kafkaConfigFromVendor = base_path('vendor/mateusjunges/laravel-kafka/config/kafka.php');
+        if (file_exists($kafkaConfigFromVendor)) {
+            $publishables[$kafkaConfigFromVendor] = config_path('kafka.php');
+        }
+
+        $this->publishes($publishables, 'rbac-config');
 
         $this->publishesMigrations([
             __DIR__.'/../../database/migrations' => database_path('migrations'),

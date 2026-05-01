@@ -25,7 +25,7 @@ final class BindGatewayUserToAuth
         }
 
         $user = new GatewayUser(id: $sub, gatewayUserInfo: $info);
-        $guard = (string) config('kafkammt.rbac.auth.guard', 'web');
+        $guard = (string) config('rbac.auth.guard', 'web');
 
         Auth::shouldUse($guard);
         Auth::guard($guard)->setUser($user);

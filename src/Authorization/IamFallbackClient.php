@@ -12,21 +12,21 @@ final class IamFallbackClient
 {
     public function fetchSnapshot(string $sub, string $surface): ?RbacSnapshotMessage
     {
-        if (! (bool) config('kafkammt.rbac.fallback.enabled', true)) {
+        if (! (bool) config('rbac.fallback.enabled', true)) {
             return null;
         }
 
-        $baseUrl = trim((string) config('kafkammt.rbac.fallback.base_url', ''));
+        $baseUrl = trim((string) config('rbac.fallback.base_url', ''));
         if ($baseUrl === '') {
             return null;
         }
 
-        $token = trim((string) config('kafkammt.rbac.fallback.internal_token', ''));
+        $token = trim((string) config('rbac.fallback.internal_token', ''));
         if ($token === '') {
             return null;
         }
 
-        $timeoutMs = (int) config('kafkammt.rbac.fallback.timeout_ms', 1500);
+        $timeoutMs = (int) config('rbac.fallback.timeout_ms', 1500);
         $timeoutSeconds = max(1, (int) ceil($timeoutMs / 1000));
 
         $response = Http::timeout($timeoutSeconds)

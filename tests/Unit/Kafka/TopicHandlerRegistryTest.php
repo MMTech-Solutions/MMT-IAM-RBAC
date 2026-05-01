@@ -29,7 +29,7 @@ final class TopicHandlerRegistryTest extends TestCase
         $container = $this->makeContainer();
         $container->singleton(FakeTopicHandler::class, FakeTopicHandler::class);
 
-        $container->make('config')->set('kafkammt.rbac.consumer.handlers', [
+        $container->make('config')->set('rbac.consumer.handlers', [
             'custom.events.v1' => FakeTopicHandler::class,
         ]);
 
@@ -53,8 +53,8 @@ final class TopicHandlerRegistryTest extends TestCase
              * @var array<string, mixed>
              */
             private array $data = [
-                'kafkammt.rbac.consumer.handlers' => [],
-                'kafkammt.rbac.consumer.on_unhandled_topic' => 'skip',
+                'rbac.consumer.handlers' => [],
+                'rbac.consumer.on_unhandled_topic' => 'skip',
             ];
 
             public function get(string $key, mixed $default = null): mixed

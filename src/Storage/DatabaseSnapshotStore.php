@@ -99,7 +99,7 @@ final class DatabaseSnapshotStore implements SnapshotStoreInterface
 
     private function table(): string
     {
-        return (string) config('kafkammt.rbac.store.table', 'rbac_user_permission_snapshots');
+        return (string) config('rbac.store.table', 'rbac_user_permission_snapshots');
     }
 }
 

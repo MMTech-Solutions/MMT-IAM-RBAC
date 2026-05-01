@@ -25,14 +25,14 @@ final class RbacConsumeSnapshotsCommand extends Command
 
     public function handle(): int
     {
-        if (! (bool) config('kafkammt.rbac.consumer.enabled', true)) {
-            $this->warn('RBAC Kafka consumer is disabled (kafkammt.rbac.consumer.enabled=false).');
+        if (! (bool) config('rbac.consumer.enabled', true)) {
+            $this->warn('RBAC Kafka consumer is disabled (rbac.consumer.enabled=false).');
 
             return self::SUCCESS;
         }
 
-        $groupId = (string) config('kafkammt.rbac.consumer.group_id', 'rbac-materializer');
-        $brokers = (string) config('kafkammt.brokers', '127.0.0.1:9092');
+        $groupId = (string) config('rbac.consumer.group_id', 'rbac-materializer');
+        $brokers = (string) config('kafka.brokers', '127.0.0.1:9092');
         $topics = $this->topicHandlerRegistry->topicsToSubscribe();
 
         $consumerBuilder = Kafka::consumer(

@@ -59,8 +59,9 @@ RBAC_STRICT_DENY=true
 RBAC_GATEWAY_INTERNAL_SECRET=apisix
 ```
 
-The package publishes a full `config/kafkammt.php` (laravel-kafka compatible keys + `kafkammt.rbac.*`),
-so Kafka connectivity and RBAC consumer behavior are managed from the same file.
+The package publishes `config/rbac.php` and also publishes `config/kafka.php`
+from `mateusjunges/laravel-kafka` in the same `rbac-config` tag.
+This keeps Kafka connection config and RBAC module config clearly separated.
 
 ### 5) Run consumer
 
@@ -69,7 +70,7 @@ php artisan rbac:consume-snapshots
 ```
 
 This command always subscribes `iam.rbac.snapshots.v1` and will additionally subscribe
-to any topics configured in `kafkammt.rbac.consumer.handlers`.
+to any topics configured in `rbac.consumer.handlers`.
 
 ## Multi-topic handlers (custom microservice logic)
 
@@ -97,15 +98,13 @@ final class AuthEventsTopicHandler implements TopicMessageHandlerInterface
 }
 ```
 
-Register topic => handler class in published `config/kafkammt.php`:
+Register topic => handler class in published `config/rbac.php`:
 
 ```php
-'rbac' => [
-    'consumer' => [
-        // ...
-        'handlers' => [
-            'auth.events.v1' => \App\Kafka\Handlers\AuthEventsTopicHandler::class,
-        ],
+'consumer' => [
+    // ...
+    'handlers' => [
+        'auth.events.v1' => \App\Kafka\Handlers\AuthEventsTopicHandler::class,
     ],
 ],
 ```

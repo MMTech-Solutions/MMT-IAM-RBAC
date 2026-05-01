@@ -64,7 +64,7 @@ final class RbacModule
                 return true;
             }
 
-            $strictDeny = (bool) config('kafkammt.rbac.auth.strict_deny', true);
+            $strictDeny = (bool) config('rbac.auth.strict_deny', true);
             if ($strictDeny) {
                 return false;
             }

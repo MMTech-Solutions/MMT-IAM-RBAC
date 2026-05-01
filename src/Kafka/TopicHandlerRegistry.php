@@ -25,7 +25,7 @@ final class TopicHandlerRegistry
         $this->register($this->container->make(RbacSnapshotTopicHandler::class));
 
         /** @var array<string, class-string<TopicMessageHandlerInterface>> $customMap */
-        $customMap = $config->get('kafkammt.rbac.consumer.handlers', []);
+        $customMap = $config->get('rbac.consumer.handlers', []);
         foreach ($customMap as $topic => $handlerClass) {
             if (! is_string($topic) || ! is_string($handlerClass) || trim($topic) === '') {
                 continue;
@@ -74,7 +74,7 @@ final class TopicHandlerRegistry
 
         $handler = $this->handlersByTopic[$topic] ?? null;
         if ($handler === null) {
-            $mode = (string) $this->container->make('config')->get('kafkammt.rbac.consumer.on_unhandled_topic', 'skip');
+            $mode = (string) $this->container->make('config')->get('rbac.consumer.on_unhandled_topic', 'skip');
             if ($mode === 'fail') {
                 throw new RuntimeException(sprintf('No Kafka handler configured for topic "%s".', $topic));
             }
