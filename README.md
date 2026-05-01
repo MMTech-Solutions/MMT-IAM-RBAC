@@ -69,8 +69,15 @@ This keeps Kafka connection config and RBAC module config clearly separated.
 php artisan rbac:consume-snapshots
 ```
 
-This command always subscribes `iam.rbac.snapshots.v1` and will additionally subscribe
-to any topics configured in `rbac.consumer.handlers`.
+By default, the command first performs an **initial sync** (consume until last available
+message in Kafka for the consumer group) and then stays running to process future events.
+It always subscribes `iam.rbac.snapshots.v1` and will additionally subscribe to any topics
+configured in `rbac.consumer.handlers`.
+
+Optional flags:
+
+- `--skip-initial-sync`: starts directly in continuous consume mode.
+- `--stop-after-last-message`: run one catch-up pass and stop.
 
 ## Multi-topic handlers (custom microservice logic)
 
