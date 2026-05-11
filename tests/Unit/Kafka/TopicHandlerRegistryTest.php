@@ -103,7 +103,14 @@ final class FakeTopicHandler implements TopicMessageHandlerInterface
 
 final class FakeConsumerMessage implements ConsumerMessage
 {
-    public function __construct(private readonly string $topicName) {}
+    /**
+     * @param  array<string, mixed>|null  $headers
+     */
+    public function __construct(
+        private readonly string $topicName,
+        private readonly mixed $body = null,
+        private readonly ?array $headers = null,
+    ) {}
 
     public function getOffset(): ?int
     {
@@ -132,7 +139,7 @@ final class FakeConsumerMessage implements ConsumerMessage
 
     public function getHeaders(): ?array
     {
-        return null;
+        return $this->headers;
     }
 
     public function getMessageIdentifier(): string
@@ -142,7 +149,7 @@ final class FakeConsumerMessage implements ConsumerMessage
 
     public function getBody(): mixed
     {
-        return null;
+        return $this->body;
     }
 }
 

@@ -1,0 +1,45 @@
+name: Continuous Integration
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  ci:
+    runs-on: ubuntu-22.04
+
+    strategy:
+      matrix:
+        php: [8.5, 8.4, 8.3, 8.2]
+        laravel: ['12.*', '13.*']
+        dependency-version: [prefer-stable]
+        include:
+          - laravel: 12.*
+            testbench: 10.*
+          - laravel: 13.*
+            testbench: 11.*
+        exclude:
+          - laravel: 13.*
+            php: 8.2
+
+    name: CI - PHP ${{ matrix.php }}  - Laravel ${{ matrix.laravel }} - Testbench ${{ matrix.testbench }} (${{ matrix.dependency-version }})
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, zip, rdkafka
+          tools: prestissimo
+          coverage: pcov
+
+      - name: Install Composer dependencies
+        run: |
+          composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          composer update --${{ matrix.dependency-version }} --no-interaction --prefer-dist
+
+      - name: PHPUnit Testing
+        run: vendor/bin/phpunit

@@ -7,6 +7,7 @@ namespace Mmtech\Rbac\Console\Commands;
 use Illuminate\Console\Command;
 use Junges\Kafka\Contracts\ConsumerMessage;
 use Junges\Kafka\Facades\Kafka;
+use Mmtech\Rbac\Kafka\HeaderAwareMessageDeserializer;
 use Mmtech\Rbac\Kafka\TopicHandlerRegistry;
 
 final class RbacConsumeSnapshotsCommand extends Command
@@ -19,7 +20,8 @@ final class RbacConsumeSnapshotsCommand extends Command
     protected $description = 'Consume fixed RBAC snapshots topic plus configured topics and dispatch handlers.';
 
     public function __construct(
-        private readonly TopicHandlerRegistry $topicHandlerRegistry
+        private readonly TopicHandlerRegistry $topicHandlerRegistry,
+        private readonly HeaderAwareMessageDeserializer $headerAwareMessageDeserializer,
     ) {
         parent::__construct();
     }
@@ -73,9 +75,10 @@ final class RbacConsumeSnapshotsCommand extends Command
             topics: $topics,
             groupId: $groupId,
             brokers: $brokers
-        )->withHandler(function (ConsumerMessage $message): void {
-            $this->topicHandlerRegistry->handle($message);
-        });
+        )->usingDeserializer($this->headerAwareMessageDeserializer)
+            ->withHandler(function (ConsumerMessage $message): void {
+                $this->topicHandlerRegistry->handle($message);
+            });
 
         $maxMessages = (int) $this->option('max-messages');
         if ($maxMessages > 0) {

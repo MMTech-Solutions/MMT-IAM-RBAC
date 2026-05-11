@@ -16,6 +16,39 @@ return [
         'on_unhandled_topic' => env('RBAC_KAFKA_ON_UNHANDLED_TOPIC', 'skip'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Kafka: Schema Registry + JSON/AVRO por cabecera content_type
+    |--------------------------------------------------------------------------
+    |
+    | Si content_type = application/avro el consumer usa AvroDeserializer (Confluent wire
+    | format). En caso contrario se usa JSON. Requiere schema_registry.url y mapeo por topic
+    | para topics que puedan llegar en AVRO.
+    |
+    */
+    'kafka' => [
+        'schema_registry' => [
+            'url' => env('RBAC_KAFKA_SCHEMA_REGISTRY_URL'),
+        ],
+
+        'serialization' => [
+            // Si true, en publish JSON se añade content_type: application/json.
+            'emit_json_content_type_header' => (bool) env('RBAC_KAFKA_EMIT_JSON_CONTENT_TYPE', false),
+
+            'avro' => [
+                /*
+                 * topic => ['schema_name' => 'subject-in-registry', 'version' => -1]
+                 * Omitir version o usar -1 para última versión (KafkaAvroSchemaRegistry::LATEST_VERSION).
+                 *
+                 * @var array<string, array{schema_name: string, version?: int}>
+                 */
+                'body_schema_by_topic' => [
+                    // 'iam.rbac.snapshots.v1' => ['schema_name' => 'iam.rbac.snapshots-value', 'version' => -1],
+                ],
+            ],
+        ],
+    ],
+
     'store' => [
         'driver' => 'database',
         'table' => env('RBAC_STORE_TABLE', 'rbac_user_permission_snapshots'),
