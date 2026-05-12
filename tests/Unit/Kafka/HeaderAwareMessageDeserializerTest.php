@@ -19,7 +19,6 @@ final class HeaderAwareMessageDeserializerTest extends TestCase
             new JsonDeserializer,
             new ContentTypeSerializationDetector,
             null,
-            null,
         );
 
         $message = new FakeConsumerMessage('t1', null, ['content_type' => 'application/avro']);
@@ -33,7 +32,6 @@ final class HeaderAwareMessageDeserializerTest extends TestCase
         $deserializer = new HeaderAwareMessageDeserializer(
             new JsonDeserializer,
             new ContentTypeSerializationDetector,
-            null,
             null,
         );
 
@@ -49,24 +47,22 @@ final class HeaderAwareMessageDeserializerTest extends TestCase
             new JsonDeserializer,
             new ContentTypeSerializationDetector,
             null,
-            null,
         );
 
         $message = new FakeConsumerMessage('t1', 'binary', ['content_type' => 'application/avro']);
 
         $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('rbac.kafka.schema_registry.url');
         $deserializer->deserialize($message);
     }
 
-    public function test_avro_header_with_registry_but_topic_not_mapped_throws(): void
+    public function test_avro_header_with_registry_but_invalid_wire_throws(): void
     {
         $codec = RbacKafkaAvroCodec::fromConfig([
             'schema_registry' => ['url' => 'http://127.0.0.1:1'],
             'serialization' => [
                 'avro' => [
-                    'body_schema_by_topic' => [
-                        'other.topic' => ['schema_name' => 'other-subject'],
-                    ],
+                    'body_schema_by_topic' => [],
                 ],
             ],
         ]);
@@ -74,13 +70,37 @@ final class HeaderAwareMessageDeserializerTest extends TestCase
         $deserializer = new HeaderAwareMessageDeserializer(
             new JsonDeserializer,
             new ContentTypeSerializationDetector,
-            $codec->avroDeserializer(),
-            $codec->registry(),
+            $codec,
         );
 
-        $message = new FakeConsumerMessage('unknown.topic', "\x00\x00\x00\x00\x01", ['content_type' => 'application/avro']);
+        $message = new FakeConsumerMessage('any.topic', "\x00", ['content_type' => 'application/avro']);
 
         $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Kafka AVRO wire decode failed');
+        $deserializer->deserialize($message);
+    }
+
+    public function test_avro_header_non_string_body_throws(): void
+    {
+        $codec = RbacKafkaAvroCodec::fromConfig([
+            'schema_registry' => ['url' => 'http://127.0.0.1:1'],
+            'serialization' => [
+                'avro' => [
+                    'body_schema_by_topic' => [],
+                ],
+            ],
+        ]);
+
+        $deserializer = new HeaderAwareMessageDeserializer(
+            new JsonDeserializer,
+            new ContentTypeSerializationDetector,
+            $codec,
+        );
+
+        $message = new FakeConsumerMessage('any.topic', ['not' => 'binary'], ['content_type' => 'application/avro']);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('binary string');
         $deserializer->deserialize($message);
     }
 }

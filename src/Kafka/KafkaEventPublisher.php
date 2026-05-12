@@ -39,7 +39,7 @@ final class KafkaEventPublisher
             $registry = $this->avroCodec->registry();
             if ($avroSerializer === null || $registry === null) {
                 throw new RuntimeException(
-                    'AVRO publish requires rbac.kafka.schema_registry.url and rbac.kafka.serialization.avro.body_schema_by_topic.'
+                    'AVRO publish requires rbac.kafka.schema_registry.url (and optional rbac.kafka.serialization.avro.body_schema_by_topic for subject mapping per topic).'
                 );
             }
 

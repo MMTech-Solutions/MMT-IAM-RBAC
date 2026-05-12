@@ -21,6 +21,7 @@ final class RbacKafkaAvroCodec
 {
     private function __construct(
         private readonly ?AvroSchemaRegistryContract $registry,
+        private readonly ?RecordSerializer $recordSerializer,
         private readonly ?AvroDeserializer $avroDeserializer,
         private readonly ?AvroSerializer $avroSerializer,
     ) {}
@@ -34,8 +35,8 @@ final class RbacKafkaAvroCodec
         /** @var array<string, mixed> $schemas */
         $schemas = $kafkaConfig['serialization']['avro']['body_schema_by_topic'] ?? [];
 
-        if (! is_string($url) || trim($url) === '' || ! is_array($schemas) || $schemas === []) {
-            return new self(null, null, null);
+        if (! is_string($url) || trim($url) === '') {
+            return new self(null, null, null, null);
         }
 
         $client = new Client(['base_uri' => self::normalizeRegistryBaseUrl($url)]);
@@ -46,42 +47,49 @@ final class RbacKafkaAvroCodec
 
         $registry = new AvroSchemaRegistry($cachedRegistry);
 
-        foreach ($schemas as $topic => $meta) {
-            if (! is_string($topic) || trim($topic) === '') {
-                continue;
-            }
-
-            $topic = trim($topic);
-            $schemaName = null;
-            $version = KafkaAvroSchemaRegistry::LATEST_VERSION;
-
-            if (is_array($meta)) {
-                $schemaName = $meta['schema_name'] ?? $meta['name'] ?? null;
-                $versionCandidate = $meta['version'] ?? null;
-                if (is_int($versionCandidate)) {
-                    $version = $versionCandidate;
+        if (is_array($schemas)) {
+            foreach ($schemas as $topic => $meta) {
+                if (! is_string($topic) || trim($topic) === '') {
+                    continue;
                 }
-            } elseif (is_string($meta) && trim($meta) !== '') {
-                $schemaName = trim($meta);
-            }
 
-            if (! is_string($schemaName) || trim($schemaName) === '') {
-                continue;
-            }
+                $topic = trim($topic);
+                $schemaName = null;
+                $version = KafkaAvroSchemaRegistry::LATEST_VERSION;
 
-            $registry->addBodySchemaMappingForTopic($topic, new KafkaAvroSchema(trim($schemaName), $version));
+                if (is_array($meta)) {
+                    $schemaName = $meta['schema_name'] ?? $meta['name'] ?? null;
+                    $versionCandidate = $meta['version'] ?? null;
+                    if (is_int($versionCandidate)) {
+                        $version = $versionCandidate;
+                    }
+                } elseif (is_string($meta) && trim($meta) !== '') {
+                    $schemaName = trim($meta);
+                }
+
+                if (! is_string($schemaName) || trim($schemaName) === '') {
+                    continue;
+                }
+
+                $registry->addBodySchemaMappingForTopic($topic, new KafkaAvroSchema(trim($schemaName), $version));
+            }
         }
 
         $recordSerializer = new RecordSerializer($cachedRegistry);
         $avroDeserializer = new AvroDeserializer($registry, $recordSerializer);
         $avroSerializer = new AvroSerializer($registry, $recordSerializer);
 
-        return new self($registry, $avroDeserializer, $avroSerializer);
+        return new self($registry, $recordSerializer, $avroDeserializer, $avroSerializer);
     }
 
     public function registry(): ?AvroSchemaRegistryContract
     {
         return $this->registry;
+    }
+
+    public function recordSerializer(): ?RecordSerializer
+    {
+        return $this->recordSerializer;
     }
 
     public function avroDeserializer(): ?AvroDeserializer

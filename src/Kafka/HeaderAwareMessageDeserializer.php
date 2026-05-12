@@ -4,20 +4,19 @@ declare(strict_types=1);
 
 namespace Mmtech\Rbac\Kafka;
 
-use Junges\Kafka\Contracts\AvroSchemaRegistry as AvroSchemaRegistryContract;
 use Junges\Kafka\Contracts\ConsumerMessage;
 use Junges\Kafka\Contracts\MessageDeserializer;
-use Junges\Kafka\Message\Deserializers\AvroDeserializer;
+use Junges\Kafka\Message\ConsumedMessage;
 use Junges\Kafka\Message\Deserializers\JsonDeserializer;
 use RuntimeException;
+use Throwable;
 
 final class HeaderAwareMessageDeserializer implements MessageDeserializer
 {
     public function __construct(
         private readonly JsonDeserializer $jsonDeserializer,
         private readonly ContentTypeSerializationDetector $contentTypeSerializationDetector,
-        private readonly ?AvroDeserializer $avroDeserializer,
-        private readonly ?AvroSchemaRegistryContract $avroSchemaRegistry,
+        private readonly ?RbacKafkaAvroCodec $avroCodec,
     ) {}
 
     public function deserialize(ConsumerMessage $message): ConsumerMessage
@@ -30,20 +29,38 @@ final class HeaderAwareMessageDeserializer implements MessageDeserializer
             return $this->jsonDeserializer->deserialize($message);
         }
 
-        if ($this->avroDeserializer === null || $this->avroSchemaRegistry === null) {
+        $recordSerializer = $this->avroCodec?->recordSerializer();
+        if ($recordSerializer === null) {
             throw new RuntimeException(
-                'Kafka message declares content_type application/avro but Schema Registry is not configured. Set rbac.kafka.schema_registry.url and rbac.kafka.serialization.avro.body_schema_by_topic.'
+                'Kafka message declares content_type application/avro but Schema Registry is not configured. Set rbac.kafka.schema_registry.url.'
             );
         }
 
-        $topic = $message->getTopicName();
-        if (! is_string($topic) || trim($topic) === '' || ! $this->avroSchemaRegistry->hasBodySchemaForTopic($topic)) {
-            throw new RuntimeException(sprintf(
-                'Kafka AVRO message on topic "%s" has no body schema mapping in rbac.kafka.serialization.avro.body_schema_by_topic.',
-                is_string($topic) ? $topic : ''
-            ));
+        $rawBody = $message->getBody();
+        if (! is_string($rawBody)) {
+            throw new RuntimeException(
+                'Kafka AVRO message body must be a binary string in Confluent wire format (expected raw bytes from broker).'
+            );
         }
 
-        return $this->avroDeserializer->deserialize($message);
+        try {
+            $decodedBody = $recordSerializer->decodeMessage($rawBody, null);
+        } catch (Throwable $e) {
+            throw new RuntimeException(
+                'Kafka AVRO wire decode failed: '.$e->getMessage(),
+                0,
+                $e
+            );
+        }
+
+        return new ConsumedMessage(
+            topicName: $message->getTopicName(),
+            partition: $message->getPartition(),
+            headers: $message->getHeaders(),
+            body: $decodedBody,
+            key: $message->getKey(),
+            offset: $message->getOffset(),
+            timestamp: $message->getTimestamp(),
+        );
     }
 }

@@ -36,13 +36,10 @@ final class RbacServiceProvider extends ServiceProvider
             return RbacKafkaAvroCodec::fromConfig($kafka);
         });
         $this->app->singleton(HeaderAwareMessageDeserializer::class, function ($app): HeaderAwareMessageDeserializer {
-            $codec = $app->make(RbacKafkaAvroCodec::class);
-
             return new HeaderAwareMessageDeserializer(
                 $app->make(JsonDeserializer::class),
                 $app->make(ContentTypeSerializationDetector::class),
-                $codec->avroDeserializer(),
-                $codec->registry(),
+                $app->make(RbacKafkaAvroCodec::class),
             );
         });
 

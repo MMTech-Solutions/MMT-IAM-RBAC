@@ -21,9 +21,11 @@ return [
     | Kafka: Schema Registry + JSON/AVRO por cabecera content_type
     |--------------------------------------------------------------------------
     |
-    | Si content_type = application/avro el consumer usa AvroDeserializer (Confluent wire
-    | format). En caso contrario se usa JSON. Requiere schema_registry.url y mapeo por topic
-    | para topics que puedan llegar en AVRO.
+    | Si content_type = application/avro el consumer decodifica el value en Confluent Avro
+    | Wire Format (magic 0x00 + schema_id + payload): el esquema se resuelve vía Schema
+    | Registry por el id embebido (varios esquemas por topic). En caso contrario se usa JSON.
+    | Requiere rbac.kafka.schema_registry.url. El mapa body_schema_by_topic solo aplica al
+    | publish AVRO (KafkaEventPublisher) para elegir subject/version por topic.
     |
     */
     'kafka' => [
@@ -38,6 +40,7 @@ return [
             'avro' => [
                 /*
                  * topic => ['schema_name' => 'subject-in-registry', 'version' => -1]
+                 * Solo necesario para publicar con SerializationFormat::Avro (encode por subject).
                  * Omitir version o usar -1 para última versión (KafkaAvroSchemaRegistry::LATEST_VERSION).
                  *
                  * @var array<string, array{schema_name: string, version?: int}>
