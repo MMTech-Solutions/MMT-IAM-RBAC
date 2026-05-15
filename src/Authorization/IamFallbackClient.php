@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Mmtech\Rbac\Authorization;
 
 use Illuminate\Support\Facades\Http;
+use Mmtech\Rbac\Authorization\Contracts\SnapshotFallbackInterface;
 use Mmtech\Rbac\Kafka\RbacSnapshotMessage;
 use Mmtech\Rbac\Kafka\RbacSnapshotRoleListNormalizer;
 use RuntimeException;
 
-final class IamFallbackClient
+final class IamFallbackClient implements SnapshotFallbackInterface
 {
     public function fetchSnapshot(string $sub, string $surface): ?RbacSnapshotMessage
     {

@@ -5,10 +5,11 @@ Portable RBAC package for Laravel microservices.
 ## What it provides
 
 - Permission checks by gateway `sub` with `request()->user()->can('permission.slug')`
+- Effective roles from the same snapshot with `request()->user()->rbacRoles()` / `rbacRole()` (or `request()->rbacRoles()`)
 - Kafka snapshot consumer (`iam.rbac.snapshots.v1`) always enabled in the command worker
 - Reusable Kafka publisher service to emit events to any topic
 - Multi-topic consumer with per-topic handlers (class-map)
-- Local materialized store in database (`rbac_user_permission_snapshots`) with permissions and per-surface role names
+- Local materialized store in database (`rbac_user_permission_snapshots`) with permissions and per-surface roles (`id` + `name`)
 - IAM fallback endpoint support when local snapshot is missing
 
 ## Installation in a Laravel microservice
@@ -128,10 +129,93 @@ $publisher->publish(
 );
 ```
 
-## Route usage
+## Checking permissions with `can()`
+
+The package registers a **global `Gate::before`** (`RbacModule`) so any `can('permission.slug')` call is resolved against the **materialized snapshot** (and IAM fallback when configured), not against Spatie models in this service.
+
+**Requirements**
+
+1. Run `rbac:consume-snapshots` (or otherwise have rows in `rbac_user_permission_snapshots`) so permissions exist for the user’s `sub` and surface.
+2. On HTTP routes, use the gateway stack **in order**: validate gateway headers, bind the user, then authorize.
+
+**Surface** is chosen the same way for every check: `SurfaceResolver` uses `config('rbac.surface.default')` when set; otherwise URLs whose path contains `/admin` use `admin_panel`, everything else `customer_app`.
+
+### Route middleware
+
+Apply the middleware aliases, then Laravel’s `can:` middleware. The user must be a `GatewayUser` (after `rbac.bind.gateway.user`).
 
 ```php
+use Illuminate\Support\Facades\Route;
+
 Route::middleware(['rbac.auth.user', 'rbac.bind.gateway.user', 'can:orders.read'])
-    ->get('/orders', OrdersController::class);
+    ->get('/orders', [OrdersController::class, 'index']);
 ```
 
+If the snapshot does not include `orders.read` for that user and surface, Laravel returns **403**. With `rbac.auth.strict_deny` enabled (default), unknown abilities are denied here instead of falling through to other gates.
+
+### In a controller or action
+
+Use the authenticated user (or `Gate`) like any Laravel app; the package intercepts the ability name:
+
+```php
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+public function index(Request $request): JsonResponse
+{
+    abort_unless($request->user()->can('orders.read'), 403);
+
+    return response()->json(['ok' => true]);
+}
+```
+
+Equivalent checks:
+
+```php
+auth()->user()->can('orders.read');
+Gate::forUser($request->user())->allows('orders.read');
+$this->authorize('orders.read'); // in a `Controller` using `AuthorizesRequests`
+```
+
+### Programmatic check by `sub` (no HTTP user)
+
+```php
+use Mmtech\Rbac\Authorization\Contracts\PermissionCheckerInterface;
+
+$allowed = app(PermissionCheckerInterface::class)->userCan(
+    $sub,
+    'orders.read',
+    'customer_app'
+);
+```
+
+If you omit the third argument, the checker uses `config('rbac.surface.default')` or falls back to `customer_app`; it does **not** inspect the URL path (unlike `Gate` during an HTTP request, which uses `SurfaceResolver`). Pass the surface explicitly when mirroring HTTP behavior from jobs or CLI.
+
+```php
+use Mmtech\Rbac\Authorization\Contracts\PermissionCheckerInterface;
+use Mmtech\Rbac\Support\SurfaceResolver;
+
+$allowed = app(PermissionCheckerInterface::class)->userCan(
+    $sub,
+    'orders.read',
+    SurfaceResolver::resolve($request)
+);
+```
+
+## Reading effective roles
+
+After `rbac.bind.gateway.user`, the authenticated user is a `Mmtech\Rbac\Auth\GatewayUser`. Roles come from the same materialized snapshot (and IAM fallback) as `can()`, using the current request surface (`SurfaceResolver`).
+
+```php
+$roles = auth()->user()->rbacRoles(); // list<array{id: string, name: string}>
+$first = auth()->user()->rbacRole();  // first entry or null
+
+// Optional explicit surface (otherwise same as Gate / SurfaceResolver for this request):
+$rolesAdmin = auth()->user()->rbacRoles('admin_panel');
+
+// Request helpers (when user is GatewayUser):
+$roles = request()->rbacRoles();
+$first = request()->rbacRole();
+```
+
+You can also resolve roles by `sub` without a gateway user: `app(\Mmtech\Rbac\Authorization\Contracts\PermissionCheckerInterface::class)->userRoles($sub, $surface)`.

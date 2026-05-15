@@ -5,57 +5,93 @@ declare(strict_types=1);
 namespace Mmtech\Rbac\Authorization;
 
 use Mmtech\Rbac\Authorization\Contracts\PermissionCheckerInterface;
+use Mmtech\Rbac\Authorization\Contracts\SnapshotFallbackInterface;
 use Mmtech\Rbac\Authorization\Contracts\SnapshotStoreInterface;
+use Mmtech\Rbac\Kafka\RbacSnapshotMessage;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 use Throwable;
 
 final class RbacPermissionChecker implements PermissionCheckerInterface
 {
     /**
-     * @var array<string, array{permissions: list<string>, rev: int}>
+     * @var array<string, RbacSnapshotMessage>
      */
-    private array $cache = [];
+    private array $snapshotCache = [];
 
     public function __construct(
         private readonly SnapshotStoreInterface $snapshotStore,
-        private readonly IamFallbackClient $iamFallbackClient
+        private readonly SnapshotFallbackInterface $snapshotFallback
     ) {}
 
     public function userCan(string $sub, string $ability, ?string $surface = null): bool
     {
         $normalizedSurface = $this->normalizeSurface($surface);
-        $cacheKey = $sub.'|'.$normalizedSurface;
-
-        if (isset($this->cache[$cacheKey])) {
-            return in_array($ability, $this->cache[$cacheKey]['permissions'], true);
-        }
 
         try {
-            $snapshot = $this->snapshotStore->getSnapshot($sub, $normalizedSurface);
+            $snapshot = $this->resolveSnapshot($sub, $normalizedSurface);
             if ($snapshot === null) {
-                $snapshot = $this->iamFallbackClient->fetchSnapshot($sub, $normalizedSurface);
-                if ($snapshot !== null) {
-                    $this->snapshotStore->upsertSnapshot($snapshot);
-                }
-            }
-
-            if ($snapshot === null || $snapshot->permissions === null || $snapshot->isTombstone) {
                 return false;
             }
 
-            $this->cache[$cacheKey] = [
-                'permissions' => $snapshot->permissions,
-                'rev' => $snapshot->rev ?? 0,
-            ];
-
             return in_array($ability, $snapshot->permissions, true);
         } catch (Throwable $e) {
-            $failMode = (string) config('rbac.auth.fail_mode', 'deny');
-            if ($failMode === 'service_unavailable') {
-                throw new ServiceUnavailableHttpException(null, 'RBAC service unavailable', $e);
-            }
+            $this->throwServiceUnavailableIfConfigured($e);
 
             return false;
+        }
+    }
+
+    /**
+     * @return list<array{id: string, name: string}>
+     */
+    public function userRoles(string $sub, ?string $surface = null): array
+    {
+        $normalizedSurface = $this->normalizeSurface($surface);
+
+        try {
+            $snapshot = $this->resolveSnapshot($sub, $normalizedSurface);
+            if ($snapshot === null || $snapshot->roles === null) {
+                return [];
+            }
+
+            return $snapshot->roles;
+        } catch (Throwable $e) {
+            $this->throwServiceUnavailableIfConfigured($e);
+
+            return [];
+        }
+    }
+
+    private function resolveSnapshot(string $sub, string $normalizedSurface): ?RbacSnapshotMessage
+    {
+        $cacheKey = $sub.'|'.$normalizedSurface;
+
+        if (isset($this->snapshotCache[$cacheKey])) {
+            return $this->snapshotCache[$cacheKey];
+        }
+
+        $snapshot = $this->snapshotStore->getSnapshot($sub, $normalizedSurface);
+        if ($snapshot === null) {
+            $snapshot = $this->snapshotFallback->fetchSnapshot($sub, $normalizedSurface);
+            if ($snapshot !== null) {
+                $this->snapshotStore->upsertSnapshot($snapshot);
+            }
+        }
+
+        if ($snapshot === null || $snapshot->isTombstone || $snapshot->permissions === null) {
+            return null;
+        }
+
+        $this->snapshotCache[$cacheKey] = $snapshot;
+
+        return $snapshot;
+    }
+
+    private function throwServiceUnavailableIfConfigured(Throwable $e): void
+    {
+        $failMode = (string) config('rbac.auth.fail_mode', 'deny');
+        if ($failMode === 'service_unavailable') {
+            throw new ServiceUnavailableHttpException(null, 'RBAC service unavailable', $e);
         }
     }
 
@@ -73,4 +109,3 @@ final class RbacPermissionChecker implements PermissionCheckerInterface
         return 'customer_app';
     }
 }
-

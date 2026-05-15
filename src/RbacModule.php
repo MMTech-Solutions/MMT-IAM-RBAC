@@ -6,6 +6,7 @@ namespace Mmtech\Rbac;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Mmtech\Rbac\Auth\GatewayUser;
 use Mmtech\Rbac\Authorization\Contracts\PermissionCheckerInterface;
 use Mmtech\Rbac\Support\SurfaceResolver;
 
@@ -39,6 +40,30 @@ final class RbacModule
                 $sub = trim((string) $info['sub']);
 
                 return $sub !== '' ? $sub : null;
+            });
+        }
+
+        if (! Request::hasMacro('rbacRoles')) {
+            Request::macro('rbacRoles', function (?string $surface = null): array {
+                /** @var Request $this */
+                $user = $this->user();
+                if ($user instanceof GatewayUser) {
+                    return $user->rbacRoles($surface);
+                }
+
+                return [];
+            });
+        }
+
+        if (! Request::hasMacro('rbacRole')) {
+            Request::macro('rbacRole', function (?string $surface = null): ?array {
+                /** @var Request $this */
+                $user = $this->user();
+                if ($user instanceof GatewayUser) {
+                    return $user->rbacRole($surface);
+                }
+
+                return null;
             });
         }
     }

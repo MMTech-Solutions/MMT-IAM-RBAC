@@ -6,6 +6,7 @@ namespace Mmtech\Rbac\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Mmtech\Rbac\Authorization\Contracts\PermissionCheckerInterface;
+use Mmtech\Rbac\Authorization\Contracts\SnapshotFallbackInterface;
 use Mmtech\Rbac\Authorization\Contracts\SnapshotStoreInterface;
 use Mmtech\Rbac\Authorization\IamFallbackClient;
 use Mmtech\Rbac\Authorization\RbacPermissionChecker;
@@ -48,6 +49,7 @@ final class RbacServiceProvider extends ServiceProvider
         $this->app->singleton(RbacSnapshotTopicHandler::class);
         $this->app->singleton(TopicHandlerRegistry::class);
         $this->app->singleton(IamFallbackClient::class);
+        $this->app->singleton(SnapshotFallbackInterface::class, static fn ($app): IamFallbackClient => $app->make(IamFallbackClient::class));
         $this->app->singleton(SnapshotStoreInterface::class, DatabaseSnapshotStore::class);
         $this->app->singleton(PermissionCheckerInterface::class, RbacPermissionChecker::class);
         $this->app->singleton(RbacPermissionChecker::class);
