@@ -8,6 +8,7 @@ final class RbacSnapshotMessage
 {
     /**
      * @param  list<string>|null  $permissions
+     * @param  list<string>|null  $roles
      */
     private function __construct(
         public readonly string $messageKey,
@@ -15,12 +16,14 @@ final class RbacSnapshotMessage
         public readonly string $surface,
         public readonly ?int $rev,
         public readonly ?array $permissions,
+        public readonly ?array $roles,
         public readonly ?string $updatedAt,
         public readonly bool $isTombstone
     ) {}
 
     /**
      * @param  list<string>  $permissions
+     * @param  list<string>  $roles
      */
     public static function snapshot(
         string $messageKey,
@@ -28,7 +31,8 @@ final class RbacSnapshotMessage
         string $surface,
         int $rev,
         array $permissions,
-        ?string $updatedAt
+        ?string $updatedAt,
+        array $roles = []
     ): self {
         return new self(
             messageKey: $messageKey,
@@ -36,6 +40,7 @@ final class RbacSnapshotMessage
             surface: $surface,
             rev: $rev,
             permissions: $permissions,
+            roles: $roles,
             updatedAt: $updatedAt,
             isTombstone: false
         );
@@ -49,9 +54,9 @@ final class RbacSnapshotMessage
             surface: $surface,
             rev: null,
             permissions: null,
+            roles: null,
             updatedAt: null,
             isTombstone: true
         );
     }
 }
-

@@ -32,6 +32,17 @@ final class DatabaseSnapshotStore implements SnapshotStoreInterface
             static fn ($permission): bool => is_string($permission) && trim($permission) !== ''
         ));
 
+        $roles = json_decode((string) ($row->roles ?? '[]'), true);
+        if (! is_array($roles)) {
+            $roles = [];
+        }
+
+        /** @var list<string> $normalizedRoles */
+        $normalizedRoles = array_values(array_filter(
+            $roles,
+            static fn ($role): bool => is_string($role) && trim($role) !== ''
+        ));
+
         $rev = (int) $row->rev;
         if ($rev < 0) {
             return null;
@@ -43,13 +54,14 @@ final class DatabaseSnapshotStore implements SnapshotStoreInterface
             surface: (string) $row->surface,
             rev: $rev,
             permissions: $normalizedPermissions,
-            updatedAt: $row->snapshot_updated_at !== null ? (string) $row->snapshot_updated_at : null
+            updatedAt: $row->snapshot_updated_at !== null ? (string) $row->snapshot_updated_at : null,
+            roles: $normalizedRoles
         );
     }
 
     public function upsertSnapshot(RbacSnapshotMessage $snapshot): void
     {
-        if ($snapshot->isTombstone || $snapshot->rev === null || $snapshot->permissions === null) {
+        if ($snapshot->isTombstone || $snapshot->rev === null || $snapshot->permissions === null || $snapshot->roles === null) {
             return;
         }
 
@@ -66,6 +78,7 @@ final class DatabaseSnapshotStore implements SnapshotStoreInterface
                 'surface' => $snapshot->surface,
                 'rev' => $snapshot->rev,
                 'permissions' => json_encode($snapshot->permissions, JSON_THROW_ON_ERROR),
+                'roles' => json_encode($snapshot->roles, JSON_THROW_ON_ERROR),
                 'snapshot_updated_at' => $snapshot->updatedAt,
                 'updated_at' => now(),
             ];

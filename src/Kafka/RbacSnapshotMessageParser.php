@@ -53,6 +53,16 @@ final class RbacSnapshotMessageParser
             static fn (?string $permission): bool => $permission !== null
         ));
 
+        $rolesRaw = $decoded['roles'] ?? null;
+        /** @var list<string> $normalizedRoles */
+        $normalizedRoles = [];
+        if (is_array($rolesRaw)) {
+            $normalizedRoles = array_values(array_filter(
+                array_map(fn ($role): ?string => $this->normalizeString($role), $rolesRaw),
+                static fn (?string $role): bool => $role !== null
+            ));
+        }
+
         $payloadSub = $this->normalizeString($decoded['sub'] ?? null) ?? $sub;
         $payloadSurface = $this->normalizeString($decoded['surface'] ?? null) ?? $surface;
         $updatedAt = $this->normalizeString($decoded['updated_at'] ?? null);
@@ -63,7 +73,8 @@ final class RbacSnapshotMessageParser
             surface: $payloadSurface,
             rev: (int) $rev,
             permissions: $normalizedPermissions,
-            updatedAt: $updatedAt
+            updatedAt: $updatedAt,
+            roles: $normalizedRoles
         );
     }
 

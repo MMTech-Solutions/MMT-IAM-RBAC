@@ -8,7 +8,7 @@ Portable RBAC package for Laravel microservices.
 - Kafka snapshot consumer (`iam.rbac.snapshots.v1`) always enabled in the command worker
 - Reusable Kafka publisher service to emit events to any topic
 - Multi-topic consumer with per-topic handlers (class-map)
-- Local materialized store in database (`rbac_user_permission_snapshots`)
+- Local materialized store in database (`rbac_user_permission_snapshots`) with permissions and per-surface role names
 - IAM fallback endpoint support when local snapshot is missing
 
 ## Installation in a Laravel microservice
