@@ -53,15 +53,7 @@ final class RbacSnapshotMessageParser
             static fn (?string $permission): bool => $permission !== null
         ));
 
-        $rolesRaw = $decoded['roles'] ?? null;
-        /** @var list<string> $normalizedRoles */
-        $normalizedRoles = [];
-        if (is_array($rolesRaw)) {
-            $normalizedRoles = array_values(array_filter(
-                array_map(fn ($role): ?string => $this->normalizeString($role), $rolesRaw),
-                static fn (?string $role): bool => $role !== null
-            ));
-        }
+        $normalizedRoles = RbacSnapshotRoleListNormalizer::fromMixed($decoded['roles'] ?? null);
 
         $payloadSub = $this->normalizeString($decoded['sub'] ?? null) ?? $sub;
         $payloadSurface = $this->normalizeString($decoded['surface'] ?? null) ?? $surface;

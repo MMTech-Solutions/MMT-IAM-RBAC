@@ -8,7 +8,7 @@ final class RbacSnapshotMessage
 {
     /**
      * @param  list<string>|null  $permissions
-     * @param  list<string>|null  $roles
+     * @param  list<array{id: string, name: string}>|null  $roles
      */
     private function __construct(
         public readonly string $messageKey,
@@ -23,7 +23,7 @@ final class RbacSnapshotMessage
 
     /**
      * @param  list<string>  $permissions
-     * @param  list<string>  $roles
+     * @param  list<array{id: string, name: string}>  $roles
      */
     public static function snapshot(
         string $messageKey,

@@ -10,7 +10,33 @@ use PHPUnit\Framework\TestCase;
 
 final class RbacSnapshotMessageParserTest extends TestCase
 {
-    public function test_parse_includes_roles_when_present(): void
+    public function test_parse_includes_roles_with_id_and_name(): void
+    {
+        $parser = new RbacSnapshotMessageParser;
+        $message = $this->makeMessage(
+            'rbac:v1:snapshot:user-uuid:customer_app',
+            json_encode([
+                'rev' => 1,
+                'permissions' => ['orders.read'],
+                'roles' => [
+                    ['id' => 'role-uuid-1', 'name' => 'customer'],
+                    ['id' => 'role-uuid-2', 'name' => 'vip'],
+                ],
+            ], JSON_THROW_ON_ERROR)
+        );
+
+        $parsed = $parser->parse($message);
+
+        self::assertNotNull($parsed);
+        self::assertFalse($parsed->isTombstone);
+        self::assertSame(['orders.read'], $parsed->permissions);
+        self::assertSame([
+            ['id' => 'role-uuid-1', 'name' => 'customer'],
+            ['id' => 'role-uuid-2', 'name' => 'vip'],
+        ], $parsed->roles);
+    }
+
+    public function test_parse_legacy_string_roles_normalizes_to_empty_id(): void
     {
         $parser = new RbacSnapshotMessageParser;
         $message = $this->makeMessage(
@@ -25,9 +51,10 @@ final class RbacSnapshotMessageParserTest extends TestCase
         $parsed = $parser->parse($message);
 
         self::assertNotNull($parsed);
-        self::assertFalse($parsed->isTombstone);
-        self::assertSame(['orders.read'], $parsed->permissions);
-        self::assertSame(['customer', 'vip'], $parsed->roles);
+        self::assertSame([
+            ['id' => '', 'name' => 'customer'],
+            ['id' => '', 'name' => 'vip'],
+        ], $parsed->roles);
     }
 
     public function test_parse_omitted_roles_defaults_to_empty_list(): void

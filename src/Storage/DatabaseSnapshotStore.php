@@ -7,6 +7,7 @@ namespace Mmtech\Rbac\Storage;
 use Illuminate\Support\Facades\DB;
 use Mmtech\Rbac\Authorization\Contracts\SnapshotStoreInterface;
 use Mmtech\Rbac\Kafka\RbacSnapshotMessage;
+use Mmtech\Rbac\Kafka\RbacSnapshotRoleListNormalizer;
 
 final class DatabaseSnapshotStore implements SnapshotStoreInterface
 {
@@ -32,16 +33,8 @@ final class DatabaseSnapshotStore implements SnapshotStoreInterface
             static fn ($permission): bool => is_string($permission) && trim($permission) !== ''
         ));
 
-        $roles = json_decode((string) ($row->roles ?? '[]'), true);
-        if (! is_array($roles)) {
-            $roles = [];
-        }
-
-        /** @var list<string> $normalizedRoles */
-        $normalizedRoles = array_values(array_filter(
-            $roles,
-            static fn ($role): bool => is_string($role) && trim($role) !== ''
-        ));
+        $rolesDecoded = json_decode((string) ($row->roles ?? '[]'), true);
+        $normalizedRoles = RbacSnapshotRoleListNormalizer::fromMixed($rolesDecoded);
 
         $rev = (int) $row->rev;
         if ($rev < 0) {

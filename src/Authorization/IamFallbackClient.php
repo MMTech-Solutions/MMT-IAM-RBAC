@@ -6,6 +6,7 @@ namespace Mmtech\Rbac\Authorization;
 
 use Illuminate\Support\Facades\Http;
 use Mmtech\Rbac\Kafka\RbacSnapshotMessage;
+use Mmtech\Rbac\Kafka\RbacSnapshotRoleListNormalizer;
 use RuntimeException;
 
 final class IamFallbackClient
@@ -66,15 +67,7 @@ final class IamFallbackClient
             static fn ($permission): bool => is_string($permission) && trim($permission) !== ''
         ));
 
-        $roles = $data['roles'] ?? null;
-        /** @var list<string> $normalizedRoles */
-        $normalizedRoles = [];
-        if (is_array($roles)) {
-            $normalizedRoles = array_values(array_filter(
-                $roles,
-                static fn ($role): bool => is_string($role) && trim($role) !== ''
-            ));
-        }
+        $normalizedRoles = RbacSnapshotRoleListNormalizer::fromMixed($data['roles'] ?? null);
 
         return RbacSnapshotMessage::snapshot(
             messageKey: sprintf('rbac:v1:snapshot:%s:%s', $sub, $surface),
