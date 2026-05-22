@@ -39,6 +39,7 @@ The package registers these aliases automatically when `RbacServiceProvider` boo
 | `rbac.trusted.internal` | Validate `X-Internal-Token` + `X-Internal-Source` when present |
 | `rbac.internal.token` | Require valid internal credentials (internal-only routes) |
 | `rbac.auth.user` | Validate gateway headers (skipped when trusted internal) |
+| `rbac.auth.user.info` | Fetch full IAM user profile and merge into `gateway_auth_user_info` |
 | `rbac.bind.gateway.user` | Bind `GatewayUser` (skipped when trusted internal) |
 | `rbac.authorize.or.internal` | `Gate` check or bypass for trusted internal (`:ability`) |
 
@@ -65,6 +66,11 @@ RBAC_GATEWAY_INTERNAL_SECRET=apisix
 RBAC_INTERNAL_TOKEN=shared-secret-between-ms
 RBAC_INTERNAL_CALLER_SOURCE=mmt-orders-service
 # RBAC_INTERNAL_LOG_TRUSTED=true
+
+RBAC_IAM_USER_ENRICH_ENABLED=true
+RBAC_IAM_BASE_URL=http://iam-service
+# RBAC_IAM_USER_FAIL_OPEN=true
+# RBAC_IAM_USER_LOG_FAILURES=false
 ```
 
 The package publishes `config/rbac.php` and also publishes `config/kafka.php`
@@ -136,6 +142,34 @@ $publisher->publish(
 );
 ```
 
+## IAM user profile enrichment (`rbac.auth.user.info`)
+
+After `rbac.auth.user` decodes gateway `X-Userinfo`, this middleware calls MMT-AUTH-SERVICE
+(`GET /api/iam/v1/rbac/admin/users/{uuid}` by default) using internal MS headers
+(`X-Internal-Token`, `X-Internal-Source`), merges the IAM `data` payload into
+`gateway_auth_user_info`, and `rbac.bind.gateway.user` exposes it on `auth()->user()`
+as `GatewayUser` (`gatewayUserInfo`, magic properties like `country_id`, `email`).
+
+**Middleware order:**
+
+```php
+Route::middleware([
+    'rbac.auth.user',
+    'rbac.auth.user.info',
+    'rbac.bind.gateway.user',
+    'can:orders.read',
+])->group(...);
+```
+
+```php
+$user = auth()->user(); // Mmtech\Rbac\Auth\GatewayUser
+$countryId = $user->country_id; // from IAM profile
+$profile = $user->gatewayUserInfo; // gateway JWT + IAM fields
+```
+
+If IAM is unreachable, `RBAC_IAM_USER_FAIL_OPEN=true` (default) keeps gateway-only claims;
+when `false`, the middleware responds with **502**.
+
 ## Internal service-to-service auth
 
 Microservices can call each other **without gateway user headers** using a shared secret and a caller identity for access logs.
@@ -183,7 +217,7 @@ The package registers a **global `Gate::before`** (`RbacModule`) so any `can('pe
 **Requirements**
 
 1. Run `rbac:consume-snapshots` (or otherwise have rows in `rbac_user_permission_snapshots`) so permissions exist for the user’s `sub` and surface.
-2. On HTTP routes, use the gateway stack **in order** (and `rbac.trusted.internal` first when supporting MS-to-MS): validate gateway headers, bind the user, then authorize.
+2. On HTTP routes, use the gateway stack **in order** (and `rbac.trusted.internal` first when supporting MS-to-MS): validate gateway headers, enrich IAM profile when needed (`rbac.auth.user.info`), bind the user, then authorize.
 
 **Surface** is chosen the same way for every check: `SurfaceResolver` uses `config('rbac.surface.default')` when set; otherwise URLs whose path contains `/admin` use `admin_panel`, everything else `customer_app`.
 
@@ -194,7 +228,7 @@ Apply the middleware aliases, then Laravel’s `can:` middleware. The user must 
 ```php
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['rbac.auth.user', 'rbac.bind.gateway.user', 'can:orders.read'])
+Route::middleware(['rbac.auth.user', 'rbac.auth.user.info', 'rbac.bind.gateway.user', 'can:orders.read'])
     ->get('/orders', [OrdersController::class, 'index']);
 ```
 

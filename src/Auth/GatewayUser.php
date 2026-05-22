@@ -57,4 +57,21 @@ final class GatewayUser implements Authenticatable, AuthorizableContract
 
         return $roles[0] ?? null;
     }
+
+    /**
+     * Read merged gateway + IAM profile fields (e.g. country_id, email, name).
+     */
+    public function profileValue(string $key, mixed $default = null): mixed
+    {
+        return $this->gatewayUserInfo[$key] ?? $default;
+    }
+
+    public function __get(string $key): mixed
+    {
+        if (array_key_exists($key, $this->gatewayUserInfo)) {
+            return $this->gatewayUserInfo[$key];
+        }
+
+        return null;
+    }
 }

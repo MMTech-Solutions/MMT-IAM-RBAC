@@ -9,6 +9,7 @@ use Illuminate\Container\Container;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
@@ -43,6 +44,13 @@ abstract class RbacConfigTestCase extends TestCase
             'rbac.gateway.userinfo_header' => 'X-Userinfo',
             'rbac.gateway.log_missing_headers' => false,
             'rbac.auth.guard' => 'web',
+            'rbac.fallback.base_url' => 'http://iam-service.test',
+            'rbac.iam_user.enabled' => true,
+            'rbac.iam_user.base_url' => 'http://iam-service.test',
+            'rbac.iam_user.path' => '/api/iam/v1/rbac/admin/users',
+            'rbac.iam_user.timeout_ms' => 1500,
+            'rbac.iam_user.fail_open' => true,
+            'rbac.iam_user.log_failures' => false,
         ];
 
         $config = new Repository(array_merge($defaults, $overrides));
@@ -63,5 +71,6 @@ abstract class RbacConfigTestCase extends TestCase
         });
 
         Gate::setFacadeApplication($app);
+        Http::setFacadeApplication($app);
     }
 }

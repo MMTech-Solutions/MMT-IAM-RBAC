@@ -6,8 +6,10 @@ namespace Mmtech\Rbac\Providers;
 
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
+use Mmtech\Rbac\Authorization\IamUserProfileClient;
 use Mmtech\Rbac\Http\Middleware\AuthorizeAbilityOrInternal;
 use Mmtech\Rbac\Http\Middleware\BindGatewayUserToAuth;
+use Mmtech\Rbac\Http\Middleware\EnrichGatewayUserInfoFromIam;
 use Mmtech\Rbac\Http\Middleware\ResolveGatewayUserInfo;
 use Mmtech\Rbac\Http\Middleware\ResolveTrustedInternalServiceRequest;
 use Mmtech\Rbac\Http\Middleware\VerifyInternalRbacToken;
@@ -55,6 +57,7 @@ final class RbacServiceProvider extends ServiceProvider
         $this->app->singleton(RbacSnapshotTopicHandler::class);
         $this->app->singleton(TopicHandlerRegistry::class);
         $this->app->singleton(IamFallbackClient::class);
+        $this->app->singleton(IamUserProfileClient::class);
         $this->app->singleton(SnapshotFallbackInterface::class, static fn ($app): IamFallbackClient => $app->make(IamFallbackClient::class));
         $this->app->singleton(SnapshotStoreInterface::class, DatabaseSnapshotStore::class);
         $this->app->singleton(PermissionCheckerInterface::class, RbacPermissionChecker::class);
@@ -108,6 +111,7 @@ final class RbacServiceProvider extends ServiceProvider
             'rbac.trusted.internal' => ResolveTrustedInternalServiceRequest::class,
             'rbac.internal.token' => VerifyInternalRbacToken::class,
             'rbac.auth.user' => ResolveGatewayUserInfo::class,
+            'rbac.auth.user.info' => EnrichGatewayUserInfoFromIam::class,
             'rbac.bind.gateway.user' => BindGatewayUserToAuth::class,
             'rbac.authorize.or.internal' => AuthorizeAbilityOrInternal::class,
         ];

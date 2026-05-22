@@ -64,6 +64,24 @@ return [
         'timeout_ms' => (int) env('RBAC_IAM_TIMEOUT_MS', 1500),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | IAM user profile enrichment (MMT-AUTH-SERVICE)
+    |--------------------------------------------------------------------------
+    |
+    | Used by rbac.auth.user.info middleware: merges gateway JWT claims with the
+    | full user record from GET /api/iam/v1/rbac/admin/users/{uuid} (internal MS auth).
+    |
+    */
+    'iam_user' => [
+        'enabled' => env('RBAC_IAM_USER_ENRICH_ENABLED', true),
+        'base_url' => env('RBAC_IAM_BASE_URL', env('RBAC_IAM_USER_BASE_URL', env('APP_URL', 'http://localhost:8000'))),
+        'path' => env('RBAC_IAM_USER_PATH', '/api/iam/v1/rbac/admin/users'),
+        'timeout_ms' => (int) env('RBAC_IAM_USER_TIMEOUT_MS', env('RBAC_IAM_TIMEOUT_MS', 1500)),
+        'fail_open' => (bool) env('RBAC_IAM_USER_FAIL_OPEN', true),
+        'log_failures' => (bool) env('RBAC_IAM_USER_LOG_FAILURES', false),
+    ],
+
     'auth' => [
         'guard' => env('RBAC_AUTH_GUARD', 'web'),
         'strict_deny' => env('RBAC_STRICT_DENY', true),
