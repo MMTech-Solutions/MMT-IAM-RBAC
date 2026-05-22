@@ -30,16 +30,19 @@ php artisan vendor:publish --tag=rbac-migrations
 php artisan migrate --no-interaction
 ```
 
-### 3) Register middleware aliases
+### 3) Middleware aliases
 
-In `bootstrap/app.php`:
+The package registers these aliases automatically when `RbacServiceProvider` boots:
 
-```php
-$middleware->alias([
-    'rbac.auth.user' => \Mmtech\Rbac\Http\Middleware\ResolveGatewayUserInfo::class,
-    'rbac.bind.gateway.user' => \Mmtech\Rbac\Http\Middleware\BindGatewayUserToAuth::class,
-]);
-```
+| Alias | Purpose |
+|-------|---------|
+| `rbac.trusted.internal` | Validate `X-Internal-Token` + `X-Internal-Source` when present |
+| `rbac.internal.token` | Require valid internal credentials (internal-only routes) |
+| `rbac.auth.user` | Validate gateway headers (skipped when trusted internal) |
+| `rbac.bind.gateway.user` | Bind `GatewayUser` (skipped when trusted internal) |
+| `rbac.authorize.or.internal` | `Gate` check or bypass for trusted internal (`:ability`) |
+
+You may still declare custom names in `bootstrap/app.php` if needed (e.g. map `auth.user` to `ResolveGatewayUserInfo`).
 
 ### 4) Configure env
 
@@ -58,6 +61,10 @@ RBAC_IAM_TIMEOUT_MS=1500
 RBAC_FAIL_MODE=deny
 RBAC_STRICT_DENY=true
 RBAC_GATEWAY_INTERNAL_SECRET=apisix
+
+RBAC_INTERNAL_TOKEN=shared-secret-between-ms
+RBAC_INTERNAL_CALLER_SOURCE=mmt-orders-service
+# RBAC_INTERNAL_LOG_TRUSTED=true
 ```
 
 The package publishes `config/rbac.php` and also publishes `config/kafka.php`
@@ -129,6 +136,46 @@ $publisher->publish(
 );
 ```
 
+## Internal service-to-service auth
+
+Microservices can call each other **without gateway user headers** using a shared secret and a caller identity for access logs.
+
+**Headers (outbound from this MS):**
+
+```http
+X-Internal-Token: <RBAC_INTERNAL_TOKEN>
+X-Internal-Source: <RBAC_INTERNAL_CALLER_SOURCE>
+```
+
+`IamFallbackClient` sends the same headers when calling IAM internal RBAC endpoints.
+
+**Route patterns** — always put `rbac.trusted.internal` first:
+
+```php
+// Gateway user OR trusted internal MS (e.g. admin APIs)
+Route::middleware([
+    'rbac.trusted.internal',
+    'rbac.auth.user',
+    'rbac.bind.gateway.user',
+    'rbac.authorize.or.internal:rbac.manage',
+])->group(...);
+
+// Internal-only (rebuild, effective permissions, etc.)
+Route::middleware(['rbac.trusted.internal', 'rbac.internal.token'])->group(...);
+```
+
+When `X-Internal-Token` is sent, `X-Internal-Source` is **required** (empty or missing → 403).
+
+**Request helpers for logging:**
+
+```php
+if (request()->isTrustedInternalServiceRequest()) {
+    $caller = request()->internalServiceSource(); // e.g. mmt-orders-service
+}
+```
+
+Laravel’s built-in `can:foo` middleware does **not** bypass for internal calls. Use `rbac.authorize.or.internal:foo` instead.
+
 ## Checking permissions with `can()`
 
 The package registers a **global `Gate::before`** (`RbacModule`) so any `can('permission.slug')` call is resolved against the **materialized snapshot** (and IAM fallback when configured), not against Spatie models in this service.
@@ -136,7 +183,7 @@ The package registers a **global `Gate::before`** (`RbacModule`) so any `can('pe
 **Requirements**
 
 1. Run `rbac:consume-snapshots` (or otherwise have rows in `rbac_user_permission_snapshots`) so permissions exist for the user’s `sub` and surface.
-2. On HTTP routes, use the gateway stack **in order**: validate gateway headers, bind the user, then authorize.
+2. On HTTP routes, use the gateway stack **in order** (and `rbac.trusted.internal` first when supporting MS-to-MS): validate gateway headers, bind the user, then authorize.
 
 **Surface** is chosen the same way for every check: `SurfaceResolver` uses `config('rbac.surface.default')` when set; otherwise URLs whose path contains `/admin` use `admin_panel`, everything else `customer_app`.
 

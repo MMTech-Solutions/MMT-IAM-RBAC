@@ -7,6 +7,7 @@ namespace Mmtech\Rbac\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Mmtech\Rbac\Support\InternalServiceRequest;
 use Symfony\Component\HttpFoundation\Response;
 
 final class ResolveGatewayUserInfo
@@ -17,6 +18,10 @@ final class ResolveGatewayUserInfo
 
     public function handle(Request $request, Closure $next): Response
     {
+        if (InternalServiceRequest::isTrusted($request)) {
+            return $next($request);
+        }
+
         $internalHeader = (string) config('rbac.gateway.internal_header', self::DEFAULT_INTERNAL_HEADER);
         $internalSecret = (string) config('rbac.gateway.internal_secret', 'apisix');
 

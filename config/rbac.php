@@ -80,5 +80,29 @@ return [
         'userinfo_header' => env('RBAC_GATEWAY_USERINFO_HEADER', 'X-Userinfo'),
         'log_missing_headers' => env('RBAC_GATEWAY_LOG_MISSING_HEADERS', false),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Internal microservice-to-microservice authentication
+    |--------------------------------------------------------------------------
+    |
+    | Shared secret (X-Internal-Token) plus caller identity (X-Internal-Source).
+    | Aligns with MMT-AUTH-SERVICE internal routes; use rbac.trusted.internal first.
+    |
+    */
+    'internal' => [
+        'token' => env('RBAC_INTERNAL_TOKEN'),
+        'token_header' => env('RBAC_INTERNAL_TOKEN_HEADER', 'X-Internal-Token'),
+        'source_header' => env('RBAC_INTERNAL_SOURCE_HEADER', 'X-Internal-Source'),
+        'caller_source' => env('RBAC_INTERNAL_CALLER_SOURCE', env('APP_NAME', 'unknown')),
+        'log_trusted_requests' => (bool) env('RBAC_INTERNAL_LOG_TRUSTED', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Legacy top-level key (MMT-AUTH-SERVICE compatibility)
+    |--------------------------------------------------------------------------
+    */
+    'internal_token' => env('RBAC_INTERNAL_TOKEN'),
 ];
 

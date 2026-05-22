@@ -31,11 +31,18 @@ final class IamFallbackClient implements SnapshotFallbackInterface
         $timeoutMs = (int) config('rbac.fallback.timeout_ms', 1500);
         $timeoutSeconds = max(1, (int) ceil($timeoutMs / 1000));
 
+        $tokenHeader = (string) config('rbac.internal.token_header', 'X-Internal-Token');
+        $sourceHeader = (string) config('rbac.internal.source_header', 'X-Internal-Source');
+        $callerSource = trim((string) config('rbac.internal.caller_source', ''));
+
+        $headers = [$tokenHeader => $token];
+        if ($callerSource !== '') {
+            $headers[$sourceHeader] = $callerSource;
+        }
+
         $response = Http::timeout($timeoutSeconds)
             ->acceptJson()
-            ->withHeaders([
-                'X-Internal-Token' => $token,
-            ])
+            ->withHeaders($headers)
             ->get(sprintf('%s/api/iam/v1/internal/rbac/users/%s/permissions', rtrim($baseUrl, '/'), $sub), [
                 'surface' => $surface,
             ]);

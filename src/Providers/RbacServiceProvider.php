@@ -4,7 +4,13 @@ declare(strict_types=1);
 
 namespace Mmtech\Rbac\Providers;
 
+use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
+use Mmtech\Rbac\Http\Middleware\AuthorizeAbilityOrInternal;
+use Mmtech\Rbac\Http\Middleware\BindGatewayUserToAuth;
+use Mmtech\Rbac\Http\Middleware\ResolveGatewayUserInfo;
+use Mmtech\Rbac\Http\Middleware\ResolveTrustedInternalServiceRequest;
+use Mmtech\Rbac\Http\Middleware\VerifyInternalRbacToken;
 use Mmtech\Rbac\Authorization\Contracts\PermissionCheckerInterface;
 use Mmtech\Rbac\Authorization\Contracts\SnapshotFallbackInterface;
 use Mmtech\Rbac\Authorization\Contracts\SnapshotStoreInterface;
@@ -78,7 +84,33 @@ final class RbacServiceProvider extends ServiceProvider
             ]);
         }
 
+        $this->registerMiddlewareAliases();
+
         RbacModule::boot();
+    }
+
+    private function registerMiddlewareAliases(): void
+    {
+        /** @var Router $router */
+        $router = $this->app->make(Router::class);
+
+        foreach (self::middlewareAliases() as $alias => $class) {
+            $router->aliasMiddleware($alias, $class);
+        }
+    }
+
+    /**
+     * @return array<string, class-string>
+     */
+    public static function middlewareAliases(): array
+    {
+        return [
+            'rbac.trusted.internal' => ResolveTrustedInternalServiceRequest::class,
+            'rbac.internal.token' => VerifyInternalRbacToken::class,
+            'rbac.auth.user' => ResolveGatewayUserInfo::class,
+            'rbac.bind.gateway.user' => BindGatewayUserToAuth::class,
+            'rbac.authorize.or.internal' => AuthorizeAbilityOrInternal::class,
+        ];
     }
 }
 

@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Mmtech\Rbac\Auth\GatewayUser;
 use Mmtech\Rbac\Authorization\Contracts\PermissionCheckerInterface;
+use Mmtech\Rbac\Support\InternalServiceRequest;
 use Mmtech\Rbac\Support\SurfaceResolver;
 
 final class RbacModule
@@ -64,6 +65,20 @@ final class RbacModule
                 }
 
                 return null;
+            });
+        }
+
+        if (! Request::hasMacro('isTrustedInternalServiceRequest')) {
+            Request::macro('isTrustedInternalServiceRequest', function (): bool {
+                /** @var Request $this */
+                return InternalServiceRequest::isTrusted($this);
+            });
+        }
+
+        if (! Request::hasMacro('internalServiceSource')) {
+            Request::macro('internalServiceSource', function (): ?string {
+                /** @var Request $this */
+                return InternalServiceRequest::source($this);
             });
         }
     }
