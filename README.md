@@ -50,7 +50,10 @@ You may still declare custom names in `bootstrap/app.php` if needed (e.g. map `a
 ```dotenv
 RBAC_KAFKA_ENABLED=true
 KAFKA_BROKERS=kafka.mmtech-solutions.com:9092
-KAFKA_SECURITY_PROTOCOL=PLAINTEXT
+KAFKA_SECURITY_PROTOCOL=SASL_PLAINTEXT
+KAFKA_MECHANISMS=PLAIN
+KAFKA_USERNAME=your-kafka-user
+KAFKA_PASSWORD=your-kafka-password
 RBAC_KAFKA_GROUP_ID=rbac-materializer
 RBAC_KAFKA_ON_UNHANDLED_TOPIC=skip
 

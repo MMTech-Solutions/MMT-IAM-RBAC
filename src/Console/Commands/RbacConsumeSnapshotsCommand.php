@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Junges\Kafka\Contracts\ConsumerMessage;
 use Junges\Kafka\Facades\Kafka;
 use Mmtech\Rbac\Kafka\HeaderAwareMessageDeserializer;
+use Mmtech\Rbac\Kafka\KafkaSaslConfigurator;
 use Mmtech\Rbac\Kafka\TopicHandlerRegistry;
 
 final class RbacConsumeSnapshotsCommand extends Command
@@ -71,10 +72,12 @@ final class RbacConsumeSnapshotsCommand extends Command
         string $brokers,
         bool $stopAfterLastMessage
     ): void {
-        $consumerBuilder = Kafka::consumer(
-            topics: $topics,
-            groupId: $groupId,
-            brokers: $brokers
+        $consumerBuilder = KafkaSaslConfigurator::applyToConsumer(
+            Kafka::consumer(
+                topics: $topics,
+                groupId: $groupId,
+                brokers: $brokers
+            )
         )->usingDeserializer($this->headerAwareMessageDeserializer)
             ->withHandler(function (ConsumerMessage $message): void {
                 $this->topicHandlerRegistry->handle($message);

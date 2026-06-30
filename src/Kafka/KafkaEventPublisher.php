@@ -80,7 +80,7 @@ final class KafkaEventPublisher
                 $builder->withHeaders($this->normalizeStringHeaders($mergedHeaders));
             }
 
-            $builder->send();
+            KafkaSaslConfigurator::applyToProducer($builder)->send();
         } catch (Throwable $e) {
             throw new RuntimeException('Kafka publish failed: '.$e->getMessage(), 0, $e);
         }
