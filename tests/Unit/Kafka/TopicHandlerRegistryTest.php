@@ -5,23 +5,40 @@ declare(strict_types=1);
 namespace Mmtech\Rbac\Tests\Unit\Kafka;
 
 use Illuminate\Container\Container;
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Junges\Kafka\Contracts\ConsumerMessage;
 use Mmtech\Rbac\Authorization\Contracts\SnapshotStoreInterface;
 use Mmtech\Rbac\Kafka\Contracts\TopicMessageHandlerInterface;
+use Mmtech\Rbac\Kafka\Handlers\RbacSnapshotTopicHandler;
 use Mmtech\Rbac\Kafka\RbacSnapshotMessageParser;
 use Mmtech\Rbac\Kafka\TopicHandlerRegistry;
 use PHPUnit\Framework\TestCase;
 
 final class TopicHandlerRegistryTest extends TestCase
 {
-    public function test_topics_to_subscribe_always_contains_fixed_snapshot_topic(): void
+    public function test_topics_to_subscribe_always_contains_default_snapshot_topic(): void
     {
         $container = $this->makeContainer();
 
         $registry = new TopicHandlerRegistry($container);
         $topics = $registry->topicsToSubscribe();
 
-        self::assertContains('iam.rbac.snapshots.v1', $topics);
+        self::assertContains(RbacSnapshotTopicHandler::TOPIC, $topics);
+    }
+
+    public function test_topics_to_subscribe_uses_configured_snapshot_topic(): void
+    {
+        $container = $this->makeContainer();
+        $container->make('config')->set(
+            'rbac.consumer.topic',
+            'fxlivecapital.iam.rbac.snapshots.v1'
+        );
+
+        $registry = new TopicHandlerRegistry($container);
+        $topics = $registry->topicsToSubscribe();
+
+        self::assertContains('fxlivecapital.iam.rbac.snapshots.v1', $topics);
+        self::assertNotContains(RbacSnapshotTopicHandler::TOPIC, $topics);
     }
 
     public function test_it_dispatches_to_custom_handler_for_configured_topic(): void
@@ -47,26 +64,62 @@ final class TopicHandlerRegistryTest extends TestCase
         $container = new Container();
         Container::setInstance($container);
 
-        $container->instance('config', new class
+        $config = new class implements ConfigRepository
         {
             /**
              * @var array<string, mixed>
              */
             private array $data = [
+                'rbac.consumer.topic' => RbacSnapshotTopicHandler::TOPIC,
                 'rbac.consumer.handlers' => [],
                 'rbac.consumer.on_unhandled_topic' => 'skip',
             ];
 
-            public function get(string $key, mixed $default = null): mixed
+            public function has($key): bool
+            {
+                return array_key_exists($key, $this->data);
+            }
+
+            public function get($key, $default = null): mixed
             {
                 return $this->data[$key] ?? $default;
             }
 
-            public function set(string $key, mixed $value): void
+            public function all(): array
             {
+                return $this->data;
+            }
+
+            public function set($key, $value = null): void
+            {
+                if (is_array($key)) {
+                    foreach ($key as $k => $v) {
+                        $this->data[$k] = $v;
+                    }
+
+                    return;
+                }
+
                 $this->data[$key] = $value;
             }
-        });
+
+            public function prepend($key, $value): void
+            {
+                $array = $this->get($key, []);
+                array_unshift($array, $value);
+                $this->set($key, $array);
+            }
+
+            public function push($key, $value): void
+            {
+                $array = $this->get($key, []);
+                $array[] = $value;
+                $this->set($key, $array);
+            }
+        };
+
+        $container->instance('config', $config);
+        $container->instance(ConfigRepository::class, $config);
 
         $container->singleton(SnapshotStoreInterface::class, static fn (): SnapshotStoreInterface => new class implements SnapshotStoreInterface
         {
@@ -152,4 +205,3 @@ final class FakeConsumerMessage implements ConsumerMessage
         return $this->body;
     }
 }
-

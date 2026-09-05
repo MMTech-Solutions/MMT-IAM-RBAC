@@ -22,7 +22,9 @@ final class TopicHandlerRegistry
     {
         $config = $this->container->make('config');
 
-        $this->register($this->container->make(RbacSnapshotTopicHandler::class));
+        $snapshotHandler = $this->container->make(RbacSnapshotTopicHandler::class);
+        $snapshotTopic = $snapshotHandler->topic();
+        $this->register($snapshotHandler);
 
         /** @var array<string, class-string<TopicMessageHandlerInterface>> $customMap */
         $customMap = $config->get('rbac.consumer.handlers', []);
@@ -49,7 +51,8 @@ final class TopicHandlerRegistry
                 ));
             }
 
-            if ($handler->topic() === RbacSnapshotTopicHandler::TOPIC) {
+            // Already registered via RbacSnapshotTopicHandler (topic from rbac.consumer.topic).
+            if ($handler->topic() === $snapshotTopic) {
                 continue;
             }
 
@@ -90,4 +93,3 @@ final class TopicHandlerRegistry
         $this->handlersByTopic[$handler->topic()] = $handler;
     }
 }
-
