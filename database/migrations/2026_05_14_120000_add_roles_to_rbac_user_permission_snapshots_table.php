@@ -10,6 +10,14 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (! Schema::hasTable('rbac_user_permission_snapshots')) {
+            return;
+        }
+
+        if (Schema::hasColumn('rbac_user_permission_snapshots', 'roles')) {
+            return;
+        }
+
         Schema::table('rbac_user_permission_snapshots', function (Blueprint $table): void {
             $table->json('roles')->nullable()->after('permissions');
         });
@@ -17,6 +25,14 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (! Schema::hasTable('rbac_user_permission_snapshots')) {
+            return;
+        }
+
+        if (! Schema::hasColumn('rbac_user_permission_snapshots', 'roles')) {
+            return;
+        }
+
         Schema::table('rbac_user_permission_snapshots', function (Blueprint $table): void {
             $table->dropColumn('roles');
         });

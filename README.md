@@ -31,6 +31,13 @@ php artisan vendor:publish --tag=rbac-migrations
 php artisan migrate --no-interaction
 ```
 
+**Important:** `vendor:publish --tag=rbac-migrations` copies *all* package migrations with a **new timestamp**.
+If `rbac_user_permission_snapshots` already exists in the service, do **not** republish the old
+create/add_roles migrations — only add the new file(s) you need (e.g.
+`*_create_rbac_role_permission_snapshots_table.php`). Package migrations are idempotent
+(`Schema::hasTable` / `hasColumn`), but duplicate migration *files* still appear as pending
+batches and can fail if an older published copy used plain `Schema::create`.
+
 ### 3) Middleware aliases
 
 The package registers these aliases automatically when `RbacServiceProvider` boots:

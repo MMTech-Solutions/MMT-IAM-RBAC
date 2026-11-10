@@ -13,7 +13,11 @@ return new class extends Migration
         if (Schema::hasTable('rcab_user_permission_snapshots')) {
             Schema::drop('rcab_user_permission_snapshots');
         }
-   
+
+        if (Schema::hasTable('rbac_user_permission_snapshots')) {
+            return;
+        }
+
         Schema::create('rbac_user_permission_snapshots', function (Blueprint $table): void {
             $table->id();
             $table->string('message_key', 191)->unique();
@@ -34,4 +38,3 @@ return new class extends Migration
         Schema::dropIfExists('rbac_user_permission_snapshots');
     }
 };
-
