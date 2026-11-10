@@ -14,6 +14,7 @@ use Mmtech\Rbac\Http\Middleware\ResolveGatewayUserInfo;
 use Mmtech\Rbac\Http\Middleware\ResolveTrustedInternalServiceRequest;
 use Mmtech\Rbac\Http\Middleware\VerifyInternalRbacToken;
 use Mmtech\Rbac\Authorization\Contracts\PermissionCheckerInterface;
+use Mmtech\Rbac\Authorization\Contracts\RoleSnapshotStoreInterface;
 use Mmtech\Rbac\Authorization\Contracts\SnapshotFallbackInterface;
 use Mmtech\Rbac\Authorization\Contracts\SnapshotStoreInterface;
 use Mmtech\Rbac\Authorization\IamFallbackClient;
@@ -25,9 +26,11 @@ use Mmtech\Rbac\Kafka\Handlers\RbacSnapshotTopicHandler;
 use Mmtech\Rbac\Kafka\HeaderAwareMessageDeserializer;
 use Mmtech\Rbac\Kafka\KafkaEventPublisher;
 use Mmtech\Rbac\Kafka\RbacKafkaAvroCodec;
+use Mmtech\Rbac\Kafka\RbacRoleSnapshotMessageParser;
 use Mmtech\Rbac\Kafka\RbacSnapshotMessageParser;
 use Mmtech\Rbac\Kafka\TopicHandlerRegistry;
 use Mmtech\Rbac\RbacModule;
+use Mmtech\Rbac\Storage\DatabaseRoleSnapshotStore;
 use Mmtech\Rbac\Storage\DatabaseSnapshotStore;
 
 final class RbacServiceProvider extends ServiceProvider
@@ -53,6 +56,7 @@ final class RbacServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(RbacSnapshotMessageParser::class);
+        $this->app->singleton(RbacRoleSnapshotMessageParser::class);
         $this->app->singleton(KafkaEventPublisher::class);
         $this->app->singleton(RbacSnapshotTopicHandler::class);
         $this->app->singleton(TopicHandlerRegistry::class);
@@ -60,6 +64,7 @@ final class RbacServiceProvider extends ServiceProvider
         $this->app->singleton(IamUserProfileClient::class);
         $this->app->singleton(SnapshotFallbackInterface::class, static fn ($app): IamFallbackClient => $app->make(IamFallbackClient::class));
         $this->app->singleton(SnapshotStoreInterface::class, DatabaseSnapshotStore::class);
+        $this->app->singleton(RoleSnapshotStoreInterface::class, DatabaseRoleSnapshotStore::class);
         $this->app->singleton(PermissionCheckerInterface::class, RbacPermissionChecker::class);
         $this->app->singleton(RbacPermissionChecker::class);
     }

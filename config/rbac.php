@@ -55,6 +55,7 @@ return [
     'store' => [
         'driver' => 'database',
         'table' => env('RBAC_STORE_TABLE', 'rbac_user_permission_snapshots'),
+        'role_table' => env('RBAC_ROLE_STORE_TABLE', 'rbac_role_permission_snapshots'),
     ],
 
     'fallback' => [

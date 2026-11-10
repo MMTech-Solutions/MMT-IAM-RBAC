@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mmtech\Rbac\Authorization;
 
 use Mmtech\Rbac\Authorization\Contracts\PermissionCheckerInterface;
+use Mmtech\Rbac\Authorization\Contracts\RoleSnapshotStoreInterface;
 use Mmtech\Rbac\Authorization\Contracts\SnapshotFallbackInterface;
 use Mmtech\Rbac\Authorization\Contracts\SnapshotStoreInterface;
 use Mmtech\Rbac\Kafka\RbacSnapshotMessage;
@@ -18,9 +19,15 @@ final class RbacPermissionChecker implements PermissionCheckerInterface
      */
     private array $snapshotCache = [];
 
+    /**
+     * @var array<string, list<string>|null>
+     */
+    private array $rolePermissionsCache = [];
+
     public function __construct(
         private readonly SnapshotStoreInterface $snapshotStore,
-        private readonly SnapshotFallbackInterface $snapshotFallback
+        private readonly SnapshotFallbackInterface $snapshotFallback,
+        private readonly RoleSnapshotStoreInterface $roleSnapshotStore
     ) {}
 
     public function userCan(string $sub, string $ability, ?string $surface = null): bool
@@ -33,7 +40,27 @@ final class RbacPermissionChecker implements PermissionCheckerInterface
                 return false;
             }
 
-            return in_array($ability, $snapshot->permissions, true);
+            if (is_array($snapshot->permissions) && in_array($ability, $snapshot->permissions, true)) {
+                return true;
+            }
+
+            if (! is_array($snapshot->roles)) {
+                return false;
+            }
+
+            foreach ($snapshot->roles as $role) {
+                $roleId = trim((string) ($role['id'] ?? ''));
+                if ($roleId === '') {
+                    continue;
+                }
+
+                $rolePermissions = $this->resolveRolePermissions($roleId, $normalizedSurface);
+                if ($rolePermissions !== null && in_array($ability, $rolePermissions, true)) {
+                    return true;
+                }
+            }
+
+            return false;
         } catch (Throwable $e) {
             $this->throwServiceUnavailableIfConfigured($e);
 
@@ -85,6 +112,22 @@ final class RbacPermissionChecker implements PermissionCheckerInterface
         $this->snapshotCache[$cacheKey] = $snapshot;
 
         return $snapshot;
+    }
+
+    /**
+     * @return list<string>|null
+     */
+    private function resolveRolePermissions(string $roleId, string $surface): ?array
+    {
+        $cacheKey = $roleId.'|'.$surface;
+        if (array_key_exists($cacheKey, $this->rolePermissionsCache)) {
+            return $this->rolePermissionsCache[$cacheKey];
+        }
+
+        $permissions = $this->roleSnapshotStore->getPermissions($roleId, $surface);
+        $this->rolePermissionsCache[$cacheKey] = $permissions;
+
+        return $permissions;
     }
 
     private function throwServiceUnavailableIfConfigured(Throwable $e): void

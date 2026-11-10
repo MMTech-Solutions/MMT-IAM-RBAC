@@ -7,9 +7,11 @@ namespace Mmtech\Rbac\Tests\Unit\Kafka;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Junges\Kafka\Contracts\ConsumerMessage;
+use Mmtech\Rbac\Authorization\Contracts\RoleSnapshotStoreInterface;
 use Mmtech\Rbac\Authorization\Contracts\SnapshotStoreInterface;
 use Mmtech\Rbac\Kafka\Contracts\TopicMessageHandlerInterface;
 use Mmtech\Rbac\Kafka\Handlers\RbacSnapshotTopicHandler;
+use Mmtech\Rbac\Kafka\RbacRoleSnapshotMessageParser;
 use Mmtech\Rbac\Kafka\RbacSnapshotMessageParser;
 use Mmtech\Rbac\Kafka\TopicHandlerRegistry;
 use PHPUnit\Framework\TestCase;
@@ -133,7 +135,20 @@ final class TopicHandlerRegistryTest extends TestCase
             public function deleteSnapshot(string $sub, string $surface): void {}
         });
 
+        $container->singleton(RoleSnapshotStoreInterface::class, static fn (): RoleSnapshotStoreInterface => new class implements RoleSnapshotStoreInterface
+        {
+            public function getPermissions(string $roleId, string $surface): ?array
+            {
+                return null;
+            }
+
+            public function upsertSnapshot(\Mmtech\Rbac\Kafka\RbacRoleSnapshotMessage $snapshot): void {}
+
+            public function deleteSnapshot(string $roleId, string $surface): void {}
+        });
+
         $container->singleton(RbacSnapshotMessageParser::class, RbacSnapshotMessageParser::class);
+        $container->singleton(RbacRoleSnapshotMessageParser::class, RbacRoleSnapshotMessageParser::class);
 
         return $container;
     }

@@ -10,6 +10,7 @@ Portable RBAC package for Laravel microservices.
 - Reusable Kafka publisher service to emit events to any topic
 - Multi-topic consumer with per-topic handlers (class-map)
 - Local materialized store in database (`rbac_user_permission_snapshots`) with permissions and per-surface roles (`id` + `name`)
+- Local role permission catalog (`rbac_role_permission_snapshots`) from Kafka keys `rbac:v1:role:{roleId}:{surface}` — `can()` resolves user permissions **or** union of role catalog permissions (avoids O(N) user fan-out when a role changes)
 - IAM fallback endpoint support when local snapshot is missing
 
 ## Installation in a Laravel microservice
@@ -303,3 +304,23 @@ $first = request()->rbacRole();
 ```
 
 You can also resolve roles by `sub` without a gateway user: `app(\Mmtech\Rbac\Authorization\Contracts\PermissionCheckerInterface::class)->userRoles($sub, $surface)`.
+
+## Role catalog snapshots (v1.14+)
+
+Role permission changes publish O(1) Kafka messages per surface instead of fan-out to every role holder.
+
+- Message key: `rbac:v1:role:{roleId}:{surface}`
+- Body: `kind=role`, `role_id`, `surface`, `permissions[]`, `rev`, `updated_at`
+- Tombstone (null body) when a role is deleted
+- Table: `rbac_role_permission_snapshots` (publish via `--tag=rbac-migrations`)
+- `RbacPermissionChecker` dual-reads: user snapshot `permissions[]` **or** union of permissions from each role in `roles[]` via the role catalog
+
+User snapshots (`rbac:v1:snapshot:{sub}:{surface}`) are still emitted on attach/detach/rebuild. During transition, flattened `permissions[]` on user snapshots remain valid.
+
+### Cutover order (do not skip)
+
+1. Tag/release this package (`v1.14`), bump `mmtech/iam-rbac` in every consuming MS, publish migrations, `migrate`, restart `rbac:consume-snapshots`. Dual-read keeps legacy flattened user snapshots working while the role catalog is empty.
+2. Deploy Auth that publishes role snapshots on role permission sync (no per-holder fan-out).
+3. Verify rows appear in `rbac_role_permission_snapshots` after editing a role.
+4. Confirm Auth no longer enqueues/publishes per-user snapshots when only role permissions change.
+5. Optional later: stop writing flattened role-derived permissions into user snapshot `permissions[]` (direct-only + roles binding).
